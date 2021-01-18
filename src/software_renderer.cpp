@@ -7,6 +7,8 @@
 
 #include "triangulation.h"
 
+#include <iostream>
+
 using namespace std;
 
 namespace CS248 {
@@ -16,6 +18,33 @@ namespace CS248 {
 
 // fill a sample location with color
 void SoftwareRendererImp::fill_sample(int sx, int sy, const Color &color) {
+  // Here, we assume sx and sy are in the rendering boundaries
+
+  // First, fill frame buffer at given sx,sy points with appropriate color
+  render_target[4 * (sx + sy * target_w)] = (uint8_t)(color.r * 255);
+  render_target[4 * (sx + sy * target_w) + 1] = (uint8_t)(color.g * 255);
+  render_target[4 * (sx + sy * target_w) + 2] = (uint8_t)(color.b * 255);
+  render_target[4 * (sx + sy * target_w) + 3] = (uint8_t)(color.a * 255);
+
+
+
+  // Next, apply appropriate transform to give the sample alpha
+  // CHECK! Is this correct? is this alpha blending needed? alpha_blending_helper doesnt seem to be implemented...
+  Color pixel_color;
+	float inv255 = 1.0 / 255.0;
+
+  pixel_color.r = render_target[4 * (sx + sy * target_w)] * inv255;
+	pixel_color.g = render_target[4 * (sx + sy * target_w) + 1] * inv255;
+	pixel_color.b = render_target[4 * (sx + sy * target_w) + 2] * inv255;
+	pixel_color.a = render_target[4 * (sx + sy * target_w) + 3] * inv255;
+
+	pixel_color = ref->alpha_blending_helper(pixel_color, color);
+
+	render_target[4 * (sx + sy * target_w)] = (uint8_t)(pixel_color.r * 255);
+	render_target[4 * (sx + sy * target_w) + 1] = (uint8_t)(pixel_color.g * 255);
+	render_target[4 * (sx + sy * target_w) + 2] = (uint8_t)(pixel_color.b * 255);
+	render_target[4 * (sx + sy * target_w) + 3] = (uint8_t)(pixel_color.a * 255);
+
 
 }
 
@@ -267,6 +296,10 @@ void SoftwareRendererImp::rasterize_point( float x, float y, Color color ) {
   render_target[4 * (sx + sy * target_w) + 2] = (uint8_t)(color.b * 255);
   render_target[4 * (sx + sy * target_w) + 3] = (uint8_t)(color.a * 255);
 
+  // Alpha blending function
+  // Want this to be after we fill the frame buffer because fill_pixel refers to what's at the frame buffer already and applies alpha to that
+  fill_pixel(sx, sy, color); 
+
 
 }
 
@@ -285,6 +318,77 @@ void SoftwareRendererImp::rasterize_triangle( float x0, float y0,
                                               Color color ) {
   // Task 1: 
   // Implement triangle rasterization (you may want to call fill_sample here)
+
+  // How to rasterize triangle:
+  //    1) Check that point is in the canvas boundary
+  //    2) Implement any speed improvements for reducing the search space >not implemented<
+  //    3) Iterate through points and check that the triple bounding condition is met
+  //      --> If met, call fill_sample
+
+
+  // 1) check bounds
+  // Point 0
+  if (x0 < 0 || x0 >= target_w) return;
+  if (y0 < 0 || y0 >= target_h) return;
+
+  // Point 1
+  if (x1 < 0 || x1 >= target_w) return;
+  if (y1 < 0 || y1 >= target_h) return;
+
+  // Point 2
+  if (x2 < 0 || x2 >= target_w) return;
+  if (y2 < 0 || y2 >= target_h) return;
+
+
+
+  // 2)
+  // TODO: Implement this one! (hint: change iter bounds!)
+  int row_iter_bound = target_h;
+  int col_iter_bound = target_w;
+
+
+  // 3) Go through all sample points
+  // Iterate in row-dominant form
+  // First, set up all of the 'inside line' based dot product equations
+  float sample_x, sample_y;
+  int L_i[3];
+  bool in_triangle;
+
+  // CHECK! If there's an error with task 1 output, check the triangle windings thing... might be the reason
+  int A[3] = {y1 - y0, 
+              y2 - y1,
+              y0 - y2}; // windings line
+  int B[3] = {x1 - x0,
+              x2 - x1,
+              x0 - x2}; // windings line
+  int C[3] = {y0*B[0] - x0*A[0],
+              y1*B[1] - x1*A[1],
+              y2*B[2] - x2*A[2]};
+
+
+
+  for (int count_row = 0; count_row < row_iter_bound; count_row++) {
+    for (int count_col = 0; count_col < col_iter_bound; count_col++) {
+
+      sample_x = count_col + 0.5;
+      sample_y = count_row + 0.5;
+
+      L_i[0] =  A[0]*sample_x - B[0]*sample_y + C[0];
+      L_i[1] =  A[1]*sample_x - B[1]*sample_y + C[1];
+      L_i[2] =  A[2]*sample_x - B[2]*sample_y + C[2];
+
+      in_triangle = (L_i[0] < 0) && (L_i[1] < 0) && (L_i[2] < 0);
+
+      if ( in_triangle ) {
+        fill_sample(count_col, count_row, color); // If we made it here, we're in the triangle, so Color it!
+      }
+
+    }
+
+  }
+
+
+
 
 }
 
