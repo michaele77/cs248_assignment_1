@@ -342,9 +342,14 @@ void SoftwareRendererImp::rasterize_triangle( float x0, float y0,
 
 
   // 2)
-  // TODO: Implement this one! (hint: change iter bounds!)
-  int row_iter_bound = target_h;
-  int col_iter_bound = target_w;
+  // Get minimum X and Y coords from P0,P1,P2
+  int row_iter_Lo_bound = std::min({ y0, y1, y2 });
+  int col_iter_Lo_bound = std::min({ x0, x1, x2 });
+
+  // Get maximum X and Y coords from P0,P1,P2
+  int row_iter_Hi_bound = std::max({ y0, y1, y2 });
+  int col_iter_Hi_bound = std::max({ x0, x1, x2 });
+
 
 
   // 3) Go through all sample points
@@ -367,25 +372,78 @@ void SoftwareRendererImp::rasterize_triangle( float x0, float y0,
 
 
 
-  for (int count_row = 0; count_row < row_iter_bound; count_row++) {
-    for (int count_col = 0; count_col < col_iter_bound; count_col++) {
+  // Attempting fast incremental update
+  // Instead of calculating all L_i every loop, we just calculate the first one and add whatever we need 
+  // CHECK! Attempted to make it faster...not sure if it is with all the extra assigns and stuff
+  int prev_L_i[3];
+  float og_sample_x = col_iter_Lo_bound + 0.5;
+  float og_sample_y = row_iter_Lo_bound + 0.5;
+  int delta_iters = 0;
+  prev_L_i[0] = A[0]*og_sample_x - B[0]*og_sample_y + C[0];
+  prev_L_i[1] = A[1]*og_sample_x - B[1]*og_sample_y + C[1];
+  prev_L_i[2] = A[2]*og_sample_x - B[2]*og_sample_y + C[2];
+
+
+  for (int count_row = row_iter_Lo_bound; count_row < row_iter_Hi_bound; count_row++) {
+    for (int count_col = col_iter_Lo_bound; count_col < col_iter_Hi_bound; count_col++) {
 
       sample_x = count_col + 0.5;
       sample_y = count_row + 0.5;
 
-      L_i[0] =  A[0]*sample_x - B[0]*sample_y + C[0];
-      L_i[1] =  A[1]*sample_x - B[1]*sample_y + C[1];
-      L_i[2] =  A[2]*sample_x - B[2]*sample_y + C[2];
-
-      in_triangle = (L_i[0] < 0) && (L_i[1] < 0) && (L_i[2] < 0);
+      in_triangle = (prev_L_i[0] <= 0) && (prev_L_i[1] <= 0) && (prev_L_i[2] <= 0);
 
       if ( in_triangle ) {
         fill_sample(count_col, count_row, color); // If we made it here, we're in the triangle, so Color it!
       }
 
+      prev_L_i[0] += A[0];
+      prev_L_i[1] += A[1];
+      prev_L_i[2] += A[2];
+
     }
 
+    prev_L_i[0] -= B[0];
+    prev_L_i[1] -= B[1];
+    prev_L_i[2] -= B[2];
+
+    delta_iters = (col_iter_Hi_bound - col_iter_Lo_bound);
+
+    prev_L_i[0] -= delta_iters*A[0];
+    prev_L_i[1] -= delta_iters*A[1];
+    prev_L_i[2] -= delta_iters*A[2];
+
   }
+
+
+
+  // // Original method!
+  // for (int count_row = 0; count_row < row_iter_bound; count_row++) {
+  //   for (int count_col = 0; count_col < col_iter_bound; count_col++) {
+
+  //     sample_x = count_col + 0.5;
+  //     sample_y = count_row + 0.5;
+
+
+  //     for(int ixx = 0; ixx < 3; ixx++) {
+  //       L_i[ixx] =  A[ixx]*sample_x - B[ixx]*sample_y + C[ixx];
+  //       if (L_i[ixx] == 0) {
+  //         // We have encountered a literal edge case!
+  //         // Let's consistently count it as 'inside'
+  //         L_i[ixx] = -1;
+  //         cout << "This happened";
+  //         // CHECK! Is this how we're supposed to handle the literal 'edge cases'??
+  //       }
+  //     }
+
+  //     in_triangle = (L_i[0] < 0) && (L_i[1] < 0) && (L_i[2] < 0);
+
+  //     if ( in_triangle ) {
+  //       fill_sample(count_col, count_row, color); // If we made it here, we're in the triangle, so Color it!
+  //     }
+
+  //   }
+
+  // }
 
 
 
