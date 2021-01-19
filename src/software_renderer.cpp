@@ -15,6 +15,8 @@ namespace CS248 {
 
 // Global variable definitions!
 std::vector<unsigned char> supersample_render_target;
+size_t supersample_width = 0;
+size_t supersample_height = 0;
 
 
 // Implements SoftwareRenderer //
@@ -24,15 +26,11 @@ void SoftwareRendererImp::fill_sample(int sx, int sy, const Color &color) {
   // Here, we assume sx and sy are in the rendering boundaries
 
   // First, fill frame buffer at given sx,sy points with appropriate color
-  render_target[4 * (sx + sy * target_w)] = (uint8_t)(color.r * 255);
-  render_target[4 * (sx + sy * target_w) + 1] = (uint8_t)(color.g * 255);
-  render_target[4 * (sx + sy * target_w) + 2] = (uint8_t)(color.b * 255);
-  render_target[4 * (sx + sy * target_w) + 3] = (uint8_t)(color.a * 255);
 
-  supersample_render_target[4 * (sx + sy * target_w)] = (uint8_t)(color.r * 255);
-  supersample_render_target[4 * (sx + sy * target_w) + 1] = (uint8_t)(color.g * 255);
-  supersample_render_target[4 * (sx + sy * target_w) + 2] = (uint8_t)(color.b * 255);
-  supersample_render_target[4 * (sx + sy * target_w) + 3] = (uint8_t)(color.a * 255);
+  supersample_render_target[4 * (sx + sy * supersample_width)] = (uint8_t)(color.r * 255);
+  supersample_render_target[4 * (sx + sy * supersample_width) + 1] = (uint8_t)(color.g * 255);
+  supersample_render_target[4 * (sx + sy * supersample_width) + 2] = (uint8_t)(color.b * 255);
+  supersample_render_target[4 * (sx + sy * supersample_width) + 3] = (uint8_t)(color.a * 255);
 
 
 
@@ -41,22 +39,17 @@ void SoftwareRendererImp::fill_sample(int sx, int sy, const Color &color) {
   Color pixel_color;
 	float inv255 = 1.0 / 255.0;
 
-  pixel_color.r = render_target[4 * (sx + sy * target_w)] * inv255;
-	pixel_color.g = render_target[4 * (sx + sy * target_w) + 1] * inv255;
-	pixel_color.b = render_target[4 * (sx + sy * target_w) + 2] * inv255;
-	pixel_color.a = render_target[4 * (sx + sy * target_w) + 3] * inv255;
+  pixel_color.r = supersample_render_target[4 * (sx + sy * supersample_width)] * inv255;
+	pixel_color.g = supersample_render_target[4 * (sx + sy * supersample_width) + 1] * inv255;
+	pixel_color.b = supersample_render_target[4 * (sx + sy * supersample_width) + 2] * inv255;
+	pixel_color.a = supersample_render_target[4 * (sx + sy * supersample_width) + 3] * inv255;
 
 	pixel_color = ref->alpha_blending_helper(pixel_color, color);
 
-	render_target[4 * (sx + sy * target_w)] = (uint8_t)(pixel_color.r * 255);
-	render_target[4 * (sx + sy * target_w) + 1] = (uint8_t)(pixel_color.g * 255);
-	render_target[4 * (sx + sy * target_w) + 2] = (uint8_t)(pixel_color.b * 255);
-	render_target[4 * (sx + sy * target_w) + 3] = (uint8_t)(pixel_color.a * 255);
-
-  supersample_render_target[4 * (sx + sy * target_w)] = (uint8_t)(pixel_color.r * 255);
-	supersample_render_target[4 * (sx + sy * target_w) + 1] = (uint8_t)(pixel_color.g * 255);
-	supersample_render_target[4 * (sx + sy * target_w) + 2] = (uint8_t)(pixel_color.b * 255);
-	supersample_render_target[4 * (sx + sy * target_w) + 3] = (uint8_t)(pixel_color.a * 255);
+  supersample_render_target[4 * (sx + sy * supersample_width)] = (uint8_t)(pixel_color.r * 255);
+	supersample_render_target[4 * (sx + sy * supersample_width) + 1] = (uint8_t)(pixel_color.g * 255);
+	supersample_render_target[4 * (sx + sy * supersample_width) + 2] = (uint8_t)(pixel_color.b * 255);
+	supersample_render_target[4 * (sx + sy * supersample_width) + 3] = (uint8_t)(pixel_color.a * 255);
 
 
 }
@@ -85,10 +78,10 @@ void SoftwareRendererImp::fill_pixel(int x, int y, const Color &color) {
 	render_target[4 * (x + y * target_w) + 3] = (uint8_t)(pixel_color.a * 255);
 
 
-  supersample_render_target[4 * (x + y * target_w)] = (uint8_t)(pixel_color.r * 255);
-	supersample_render_target[4 * (x + y * target_w) + 1] = (uint8_t)(pixel_color.g * 255);
-	supersample_render_target[4 * (x + y * target_w) + 2] = (uint8_t)(pixel_color.b * 255);
-	supersample_render_target[4 * (x + y * target_w) + 3] = (uint8_t)(pixel_color.a * 255);
+  // supersample_render_target[4 * (x + y * target_w)] = (uint8_t)(pixel_color.r * 255);
+	// supersample_render_target[4 * (x + y * target_w) + 1] = (uint8_t)(pixel_color.g * 255);
+	// supersample_render_target[4 * (x + y * target_w) + 2] = (uint8_t)(pixel_color.b * 255);
+	// supersample_render_target[4 * (x + y * target_w) + 3] = (uint8_t)(pixel_color.a * 255);
 
 }
 
@@ -125,7 +118,9 @@ void SoftwareRendererImp::set_sample_rate( size_t sample_rate ) {
   this->sample_rate = sample_rate;
 
   // CHECK! what are we supposed to modify here? handled in drawsvg
-  supersample_render_target.resize( supersample_render_target.size() * sample_rate * sample_rate );
+  supersample_render_target.resize( supersample_render_target.size() * sample_rate * sample_rate * 4 );
+  supersample_width = this->target_w*sample_rate;
+  supersample_height = this->target_h*sample_rate;
 
 
 }
@@ -142,8 +137,12 @@ void SoftwareRendererImp::set_render_target( unsigned char* render_target,
   // CHECK! what are we supposed to modify here? made the supersample buffer global
   cout << "width is " << width;
   cout << "height is " << height;
-  supersample_render_target.resize(width*height);
+  supersample_render_target.resize(width*height*4);
   cout << "total array length is " << supersample_render_target.size();
+
+  supersample_width = width*this->sample_rate;
+  supersample_height = height*this->sample_rate;
+
 
   // // Supersample support...create the supersample_render_target
   // int arrSize = render_target.size();
@@ -364,30 +363,36 @@ void SoftwareRendererImp::rasterize_triangle( float x0, float y0,
   //    3) Iterate through points and check that the triple bounding condition is met
   //      --> If met, call fill_sample
 
+  float ss_x0 = x0*this->sample_rate;
+  float ss_y0 = y0*this->sample_rate;
+  float ss_x1 = x1*this->sample_rate;
+  float ss_y1 = y1*this->sample_rate;
+  float ss_x2 = x2*this->sample_rate;
+  float ss_y2 = y2*this->sample_rate;
 
   // 1) check bounds
   // Point 0
-  if (x0 < 0 || x0 >= target_w) return;
-  if (y0 < 0 || y0 >= target_h) return;
+  if (ss_x0 < 0 || ss_x0 >= supersample_width) return;
+  if (ss_y0 < 0 || ss_y0 >= supersample_height) return;
 
   // Point 1
-  if (x1 < 0 || x1 >= target_w) return;
-  if (y1 < 0 || y1 >= target_h) return;
+  if (ss_x1 < 0 || ss_x1 >= supersample_width) return;
+  if (ss_y1 < 0 || ss_y1 >= supersample_height) return;
 
   // Point 2
-  if (x2 < 0 || x2 >= target_w) return;
-  if (y2 < 0 || y2 >= target_h) return;
+  if (ss_x2 < 0 || ss_x2 >= supersample_width) return;
+  if (ss_y2 < 0 || ss_y2 >= supersample_height) return;
 
 
 
   // 2)
   // Get minimum X and Y coords from P0,P1,P2
-  int row_iter_Lo_bound = std::min({ y0, y1, y2 });
-  int col_iter_Lo_bound = std::min({ x0, x1, x2 });
+  int row_iter_Lo_bound = std::min({ ss_y0, ss_y1, ss_y2 });
+  int col_iter_Lo_bound = std::min({ ss_x0, ss_x1, ss_x2 });
 
   // Get maximum X and Y coords from P0,P1,P2
-  int row_iter_Hi_bound = std::max({ y0, y1, y2 });
-  int col_iter_Hi_bound = std::max({ x0, x1, x2 });
+  int row_iter_Hi_bound = std::max({ ss_y0, ss_y1, ss_y2 });
+  int col_iter_Hi_bound = std::max({ ss_x0, ss_x1, ss_x2 });
 
 
 
@@ -399,15 +404,15 @@ void SoftwareRendererImp::rasterize_triangle( float x0, float y0,
   bool in_triangle;
 
   // CHECK! If there's an error with task 1 output, check the triangle windings thing... might be the reason
-  int A[3] = {y1 - y0, 
-              y2 - y1,
-              y0 - y2}; // windings line
-  int B[3] = {x1 - x0,
-              x2 - x1,
-              x0 - x2}; // windings line
-  int C[3] = {y0*B[0] - x0*A[0],
-              y1*B[1] - x1*A[1],
-              y2*B[2] - x2*A[2]};
+  int A[3] = {ss_y1 - ss_y0, 
+              ss_y2 - ss_y1,
+              ss_y0 - ss_y2}; // windings line
+  int B[3] = {ss_x1 - ss_x0,
+              ss_x2 - ss_x1,
+              ss_x0 - ss_x2}; // windings line
+  int C[3] = {ss_y0*B[0] - ss_x0*A[0],
+              ss_y1*B[1] - ss_x1*A[1],
+              ss_y2*B[2] - ss_x2*A[2]};
 
 
 
@@ -505,6 +510,18 @@ void SoftwareRendererImp::resolve( void ) {
   // You may also need to modify other functions marked with "Task 2".
 
   // To do a unit area box filter we just average over the appropriate squares 
+  float tempSum = 0;
+
+  for (int i = 0; i < target_h; i++) {
+    for (int j = 0; j < target_w; i++) {
+      tempSum = 0;
+      for (int supIter = 0; supIter < sample_rate; supIter++) {
+        tempSum += supersample_render_target[(j + i*supersample_width + supIter)];
+      }
+      render_target[4 * (j + i*target_w )] = tempSum / sample_rate;
+      
+    }
+  }
 
   return;
 
