@@ -13,6 +13,9 @@ using namespace std;
 
 namespace CS248 {
 
+// Global variable definitions!
+std::vector<unsigned char> supersample_render_target;
+
 
 // Implements SoftwareRenderer //
 
@@ -25,6 +28,11 @@ void SoftwareRendererImp::fill_sample(int sx, int sy, const Color &color) {
   render_target[4 * (sx + sy * target_w) + 1] = (uint8_t)(color.g * 255);
   render_target[4 * (sx + sy * target_w) + 2] = (uint8_t)(color.b * 255);
   render_target[4 * (sx + sy * target_w) + 3] = (uint8_t)(color.a * 255);
+
+  supersample_render_target[4 * (sx + sy * target_w)] = (uint8_t)(color.r * 255);
+  supersample_render_target[4 * (sx + sy * target_w) + 1] = (uint8_t)(color.g * 255);
+  supersample_render_target[4 * (sx + sy * target_w) + 2] = (uint8_t)(color.b * 255);
+  supersample_render_target[4 * (sx + sy * target_w) + 3] = (uint8_t)(color.a * 255);
 
 
 
@@ -44,6 +52,11 @@ void SoftwareRendererImp::fill_sample(int sx, int sy, const Color &color) {
 	render_target[4 * (sx + sy * target_w) + 1] = (uint8_t)(pixel_color.g * 255);
 	render_target[4 * (sx + sy * target_w) + 2] = (uint8_t)(pixel_color.b * 255);
 	render_target[4 * (sx + sy * target_w) + 3] = (uint8_t)(pixel_color.a * 255);
+
+  supersample_render_target[4 * (sx + sy * target_w)] = (uint8_t)(pixel_color.r * 255);
+	supersample_render_target[4 * (sx + sy * target_w) + 1] = (uint8_t)(pixel_color.g * 255);
+	supersample_render_target[4 * (sx + sy * target_w) + 2] = (uint8_t)(pixel_color.b * 255);
+	supersample_render_target[4 * (sx + sy * target_w) + 3] = (uint8_t)(pixel_color.a * 255);
 
 
 }
@@ -70,6 +83,12 @@ void SoftwareRendererImp::fill_pixel(int x, int y, const Color &color) {
 	render_target[4 * (x + y * target_w) + 1] = (uint8_t)(pixel_color.g * 255);
 	render_target[4 * (x + y * target_w) + 2] = (uint8_t)(pixel_color.b * 255);
 	render_target[4 * (x + y * target_w) + 3] = (uint8_t)(pixel_color.a * 255);
+
+
+  supersample_render_target[4 * (x + y * target_w)] = (uint8_t)(pixel_color.r * 255);
+	supersample_render_target[4 * (x + y * target_w) + 1] = (uint8_t)(pixel_color.g * 255);
+	supersample_render_target[4 * (x + y * target_w) + 2] = (uint8_t)(pixel_color.b * 255);
+	supersample_render_target[4 * (x + y * target_w) + 3] = (uint8_t)(pixel_color.a * 255);
 
 }
 
@@ -105,6 +124,10 @@ void SoftwareRendererImp::set_sample_rate( size_t sample_rate ) {
   // You may want to modify this for supersampling support
   this->sample_rate = sample_rate;
 
+  // CHECK! what are we supposed to modify here? handled in drawsvg
+  supersample_render_target.resize( supersample_render_target.size() * sample_rate * sample_rate );
+
+
 }
 
 void SoftwareRendererImp::set_render_target( unsigned char* render_target,
@@ -115,6 +138,17 @@ void SoftwareRendererImp::set_render_target( unsigned char* render_target,
   this->render_target = render_target;
   this->target_w = width;
   this->target_h = height;
+
+  // CHECK! what are we supposed to modify here? made the supersample buffer global
+  cout << "width is " << width;
+  cout << "height is " << height;
+  supersample_render_target.resize(width*height);
+  cout << "total array length is " << supersample_render_target.size();
+
+  // // Supersample support...create the supersample_render_target
+  // int arrSize = render_target.size();
+  // cout << "Full array size is: " << arrSize;
+
 
 }
 
@@ -296,6 +330,11 @@ void SoftwareRendererImp::rasterize_point( float x, float y, Color color ) {
   render_target[4 * (sx + sy * target_w) + 2] = (uint8_t)(color.b * 255);
   render_target[4 * (sx + sy * target_w) + 3] = (uint8_t)(color.a * 255);
 
+  supersample_render_target[4 * (sx + sy * target_w)] = (uint8_t)(color.r * 255);
+  supersample_render_target[4 * (sx + sy * target_w) + 1] = (uint8_t)(color.g * 255);
+  supersample_render_target[4 * (sx + sy * target_w) + 2] = (uint8_t)(color.b * 255);
+  supersample_render_target[4 * (sx + sy * target_w) + 3] = (uint8_t)(color.a * 255);
+
   // Alpha blending function
   // Want this to be after we fill the frame buffer because fill_pixel refers to what's at the frame buffer already and applies alpha to that
   fill_pixel(sx, sy, color); 
@@ -374,7 +413,7 @@ void SoftwareRendererImp::rasterize_triangle( float x0, float y0,
 
   // Attempting fast incremental update
   // Instead of calculating all L_i every loop, we just calculate the first one and add whatever we need 
-  // CHECK! Attempted to make it faster...not sure if it is with all the extra assigns and stuff
+  // CHECK! Attempted to make it faster...not sure if it is with all the extra assigns and stuffsample_rate
   int prev_L_i[3];
   float og_sample_x = col_iter_Lo_bound + 0.5;
   float og_sample_y = row_iter_Lo_bound + 0.5;
@@ -464,6 +503,9 @@ void SoftwareRendererImp::resolve( void ) {
   // Task 2: 
   // Implement supersampling
   // You may also need to modify other functions marked with "Task 2".
+
+  // To do a unit area box filter we just average over the appropriate squares 
+
   return;
 
 }
