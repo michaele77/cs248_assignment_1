@@ -8,6 +8,7 @@
 #include "triangulation.h"
 
 #include <iostream>
+#include <numeric>
 
 using namespace std;
 
@@ -137,7 +138,7 @@ void SoftwareRendererImp::set_render_target( unsigned char* render_target,
   // CHECK! what are we supposed to modify here? made the supersample buffer global
   cout << "width is " << width;
   cout << "height is " << height;
-  supersample_render_target.resize(width*height*4);
+  supersample_render_target.resize(width*height*4*sample_rate*sample_rate);
   cout << "total array length is " << supersample_render_target.size();
 
   supersample_width = width*this->sample_rate;
@@ -510,18 +511,63 @@ void SoftwareRendererImp::resolve( void ) {
   // You may also need to modify other functions marked with "Task 2".
 
   // To do a unit area box filter we just average over the appropriate squares 
-  float tempSum = 0;
 
-  for (int i = 0; i < target_h; i++) {
-    for (int j = 0; j < target_w; i++) {
-      tempSum = 0;
-      for (int supIter = 0; supIter < sample_rate; supIter++) {
-        tempSum += supersample_render_target[(j + i*supersample_width + supIter)];
-      }
-      render_target[4 * (j + i*target_w )] = tempSum / sample_rate;
-      
+  // Let's use a mask vector and do a dot product, will reduce code clutter (hopefully)
+
+
+  
+
+
+  std::vector<unsigned char> filter_mask;
+  filter_mask.resize( sample_rate*(supersample_width + 4) ); // simplified from sample_rate*supersample_width + sample_rate*4
+
+  // std::fill(filter_mask.begin(), filter_mask.end(), 0);
+  // filter_mask = {0}; // Initialize all elemenets to 0
+
+  // Now create the filter mask
+  // If sample rate == 2, then we have an adjacent set of pixels, plus 2 at 4*supersample_width away from each one
+  // If sample rate == 2, have 2 adjacent pixels, plus 3 at 4*supersample_width, plus another 3 at 4*supersample_width*2
+  // etc
+
+  // This will loop over sample_rate^2 points, since thats how many extra samples per pixels we have 
+  for (int i = 0; i < sample_rate; i++) {
+    for (int j = 0; j < sample_rate; j++) {
+      filter_mask[4*j + supersample_width*i] = 1/sample_rate/sample_rate;
     }
   }
+
+  // Now calculate inner product over the supersample_render_target by shifting the start point of the dot product
+  int render_target_length = 4 * target_w * target_h;
+  int filter_len = filter_mask.size();
+
+  for(int i = 0; i < render_target_length; i++) {
+    render_target[i] = std::inner_product(supersample_render_target.begin()+i, supersample_render_target.begin()+i+filter_len, filter_mask.begin(), 0);
+    // render_target[i] = supersample_render_target[i];
+
+  }
+
+
+  std::fill(supersample_render_target.begin(), supersample_render_target.end(), 0); // Fill super_render_target with 0s so we can reset it!
+  
+
+
+  
+
+
+  // Yucky nested for loop implementation
+  // for (int i = 0; i < target_h; i++) {
+  //   for (int j = 0; j < target_w; i++) {
+  //     tempPixelSum = {0,0,0,0};
+  //     for (int supIter = 0; supIter < sample_rate; supIter++) {
+  //       tempPixelSum[0] += supersample_render_target[4 * (j*sample_rate + i*supersample_width*sample_rate + supIter)];
+  //       tempPixelSum[0] += supersample_render_target[4 * (j*sample_rate + i*supersample_width*sample_rate + supIter) + 1];
+  //       tempPixelSum[0] += supersample_render_target[4 * (j*sample_rate + i*supersample_width*sample_rate + supIter) + 2];
+  //       tempPixelSum[0] += supersample_render_target[4 * (j*sample_rate + i*supersample_width*sample_rate + supIter) + 3];
+  //     }
+  //     render_target[4 * (j + i*target_w )] = tempSum / sample_rate;
+      
+  //   }
+  // }
 
   return;
 
