@@ -15,7 +15,7 @@ using namespace std;
 namespace CS248 {
 
 // Global variable definitions!
-std::vector<unsigned char> supersample_render_target;
+std::vector<int> supersample_render_target;
 size_t supersample_width = 0;
 size_t supersample_height = 0;
 
@@ -119,9 +119,11 @@ void SoftwareRendererImp::set_sample_rate( size_t sample_rate ) {
   this->sample_rate = sample_rate;
 
   // CHECK! what are we supposed to modify here? handled in drawsvg
-  supersample_render_target.resize( supersample_render_target.size() * sample_rate * sample_rate * 4 );
+  supersample_render_target.resize( target_h*target_w*4*sample_rate*sample_rate );
   supersample_width = this->target_w*sample_rate;
   supersample_height = this->target_h*sample_rate;
+
+  printf("Sample rate ois %d\n", (int)sample_rate);
 
 
 }
@@ -138,7 +140,7 @@ void SoftwareRendererImp::set_render_target( unsigned char* render_target,
   // CHECK! what are we supposed to modify here? made the supersample buffer global
   cout << "width is " << width;
   cout << "height is " << height;
-  supersample_render_target.resize(width*height*4*sample_rate*sample_rate);
+  supersample_render_target.resize(width*height*4);
   cout << "total array length is " << supersample_render_target.size();
 
   supersample_width = width*this->sample_rate;
@@ -364,12 +366,12 @@ void SoftwareRendererImp::rasterize_triangle( float x0, float y0,
   //    3) Iterate through points and check that the triple bounding condition is met
   //      --> If met, call fill_sample
 
-  float ss_x0 = x0*this->sample_rate;
-  float ss_y0 = y0*this->sample_rate;
-  float ss_x1 = x1*this->sample_rate;
-  float ss_y1 = y1*this->sample_rate;
-  float ss_x2 = x2*this->sample_rate;
-  float ss_y2 = y2*this->sample_rate;
+  float ss_x0 = x0*sample_rate;
+  float ss_y0 = y0*sample_rate;
+  float ss_x1 = x1*sample_rate;
+  float ss_y1 = y1*sample_rate;
+  float ss_x2 = x2*sample_rate;
+  float ss_y2 = y2*sample_rate;
 
   // 1) check bounds
   // Point 0
@@ -518,7 +520,9 @@ void SoftwareRendererImp::resolve( void ) {
   
 
 
-  std::vector<unsigned char> filter_mask;
+  // CHECK! Come back and change filter and supersample types to be unsigned char to optimize
+  std::vector<int> filter_mask;
+  printf("width is %d\n", (int)supersample_width);
   filter_mask.resize( sample_rate*(supersample_width + 4) ); // simplified from sample_rate*supersample_width + sample_rate*4
 
   // std::fill(filter_mask.begin(), filter_mask.end(), 0);
@@ -532,7 +536,10 @@ void SoftwareRendererImp::resolve( void ) {
   // This will loop over sample_rate^2 points, since thats how many extra samples per pixels we have 
   for (int i = 0; i < sample_rate; i++) {
     for (int j = 0; j < sample_rate; j++) {
-      filter_mask[4*j + supersample_width*i] = 1/sample_rate/sample_rate;
+      filter_mask[4*j + supersample_width*i] = 1;
+      printf("curr i is %d\n", i);
+      printf("curr j is %d\n", j);
+      printf("curr pos is %d\n", 4*j + supersample_width*i);
     }
   }
 
@@ -540,9 +547,90 @@ void SoftwareRendererImp::resolve( void ) {
   int render_target_length = 4 * target_w * target_h;
   int filter_len = filter_mask.size();
 
-  for(int i = 0; i < render_target_length; i++) {
-    render_target[i] = std::inner_product(supersample_render_target.begin()+i, supersample_render_target.begin()+i+filter_len, filter_mask.begin(), 0);
-    // render_target[i] = supersample_render_target[i];
+  printf("filter length: %d\n", filter_len);
+
+
+  printf("\n");
+
+  for (int letsloop = 0; letsloop < 12; letsloop ++) {
+      supersample_render_target[letsloop] = 200;
+  }
+
+  // int tempSum = 0;
+  int sample_rate_sq = sample_rate*sample_rate;
+  for(int i = 0; i < render_target_length - filter_len + 1; i++) {
+  // for(int i = 0; i < render_target_length - 4; i++) {
+
+    // Try implementing my own inner product!
+
+    // for (int curT = 0; curT < filter_mask.size(); curT++) {
+    //   tempSum += supersample_render_target[i+curT]*filter_mask[curT];
+    // }
+    // render_target[i] = tempSum / (sample_rate*sample_rate);
+    // tempSum = 0;
+    
+    
+    render_target[i] = std::inner_product(supersample_render_target.begin()+i, supersample_render_target.begin()+i+filter_len, filter_mask.begin(), 0) / sample_rate_sq;
+    if (i == 0) {
+      printf("I'm at 0 !!!!\n");
+      printf("here it is: %d\n", supersample_render_target[3*i]);
+      printf("%d", supersample_render_target.size());
+    }
+
+    if (i == 2) {
+      printf("I'm at last place !!!!\n");
+      printf("here it is: %d\n", supersample_render_target[3*i]);
+    }
+
+    // render_target[i] = supersample_render_target[4*sample_rate_sq*i];
+    // render_target[i+1] = supersample_render_target[4*sample_rate_sq*i + 1];
+    // render_target[i] = supersample_render_target[4*sample_rate_sq*i + 2];
+    // render_target[i] = supersample_render_target[4*sample_rate_sq*i + 3];
+
+
+    if (i == render_target_length - filter_len) {
+      printf("i is %d\n", i);
+      printf("filter length is %d\n", filter_len);
+      printf("Super length is %d\n", (int)supersample_render_target.size());
+
+    }
+    
+    if (i == 5) {
+      std::vector<int> a;
+      a = {0,1,2,3,4};
+
+      std::vector<int> b;
+      b = {-2,-2,-2};
+
+      int tmpout = std::inner_product(a.begin(), a.begin()+3, b.begin(), 0);
+      printf("practice inner product: %d", tmpout);
+
+      tmpout = std::inner_product(a.begin()+1, a.begin()+3+1, b.begin(), 0);
+      printf("practice inner product: %d", tmpout);
+
+    }
+
+    // if (i == 1 || i == 3 || i == 1000) {
+    //   printf("we're at %d, and out inner product is: %d\n", i, render_target[i]);
+    //   float printingOut = std::inner_product(supersample_render_target.begin()+i, supersample_render_target.begin()+i+filter_len, filter_mask.begin(), 0);
+    //   printf("Custom output: %f\n", printingOut);
+
+    //   printf("First few mask elements: \n");
+
+    //   for (int tmpprint = 0; tmpprint < 20; tmpprint++) {
+    //     printf("%d", filter_mask[tmpprint]);
+    //   }
+    //   printf("\n");
+
+    //   printf("First few supersample elements: \n");
+    //   for (int tmpprint = 0; tmpprint < 20; tmpprint++) {
+    //     printf("%d", supersample_render_target[tmpprint]);
+    //   }
+    //   printf("\n");
+
+    // }
+
+
 
   }
 
