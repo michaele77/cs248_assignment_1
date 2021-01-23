@@ -552,9 +552,9 @@ void SoftwareRendererImp::resolve( void ) {
 
   printf("\n");
 
-  for (int letsloop = 0; letsloop < 12; letsloop ++) {
-      supersample_render_target[letsloop] = 200;
-  }
+  // for (int letsloop = 0; letsloop < 12; letsloop ++) {
+  //     supersample_render_target[letsloop] = 200;
+  // }
 
   // int tempSum = 0;
   int sample_rate_sq = sample_rate*sample_rate;
