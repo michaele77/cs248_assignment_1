@@ -536,7 +536,7 @@ void SoftwareRendererImp::resolve( void ) {
   // This will loop over sample_rate^2 points, since thats how many extra samples per pixels we have 
   for (int i = 0; i < sample_rate; i++) {
     for (int j = 0; j < sample_rate; j++) {
-      filter_mask[4*j + supersample_width*i] = 1;
+      filter_mask[4*(j + supersample_width*i)] = 1;
       printf("curr i is %d\n", i);
       printf("curr j is %d\n", j);
       printf("curr pos is %d\n", 4*j + supersample_width*i);
@@ -557,106 +557,37 @@ void SoftwareRendererImp::resolve( void ) {
   // }
 
   // int tempSum = 0;
+  int indx_target = 0;
+  int indx_supsamp_target = 0;
   int sample_rate_sq = sample_rate*sample_rate;
-  for(int i = 0; i < render_target_length - filter_len + 1; i++) {
-  // for(int i = 0; i < render_target_length - 4; i++) {
+  for(int i = 0; i < target_h; i++) {
+    for(int j = 0; j < target_w; j++) {
 
-    // Try implementing my own inner product!
 
-    // for (int curT = 0; curT < filter_mask.size(); curT++) {
-    //   tempSum += supersample_render_target[i+curT]*filter_mask[curT];
-    // }
-    // render_target[i] = tempSum / (sample_rate*sample_rate);
-    // tempSum = 0;
+
+
+
+      indx_target = 4*(i*target_w + j);
+      indx_supsamp_target = 4*sample_rate*(i*supersample_width + j);
+
     
-    
-    render_target[i] = std::inner_product(supersample_render_target.begin()+i, supersample_render_target.begin()+i+filter_len, filter_mask.begin(), 0) / sample_rate_sq;
-    if (i == 0) {
-      printf("I'm at 0 !!!!\n");
-      printf("here it is: %d\n", supersample_render_target[3*i]);
-      printf("%d", supersample_render_target.size());
-    }
-
-    if (i == 2) {
-      printf("I'm at last place !!!!\n");
-      printf("here it is: %d\n", supersample_render_target[3*i]);
-    }
-
-    // render_target[i] = supersample_render_target[4*sample_rate_sq*i];
-    // render_target[i+1] = supersample_render_target[4*sample_rate_sq*i + 1];
-    // render_target[i] = supersample_render_target[4*sample_rate_sq*i + 2];
-    // render_target[i] = supersample_render_target[4*sample_rate_sq*i + 3];
+      render_target[indx_target] = std::inner_product(supersample_render_target.begin()+indx_supsamp_target, supersample_render_target.begin()+indx_supsamp_target+filter_len, filter_mask.begin(), 0) / sample_rate;
+      render_target[indx_target+1] = std::inner_product(supersample_render_target.begin()+indx_supsamp_target+1, supersample_render_target.begin()+indx_supsamp_target+1+filter_len, filter_mask.begin(), 0) / sample_rate;
+      render_target[indx_target+2] = std::inner_product(supersample_render_target.begin()+indx_supsamp_target+2, supersample_render_target.begin()+indx_supsamp_target+2+filter_len, filter_mask.begin(), 0) / sample_rate;
+      render_target[indx_target+3] = std::inner_product(supersample_render_target.begin()+indx_supsamp_target+3, supersample_render_target.begin()+indx_supsamp_target+3+filter_len, filter_mask.begin(), 0) / sample_rate;
 
 
-    if (i == render_target_length - filter_len) {
-      printf("i is %d\n", i);
-      printf("filter length is %d\n", filter_len);
-      printf("Super length is %d\n", (int)supersample_render_target.size());
+      // render_target[i] = supersample_render_target[4*sample_rate_sq*i];
+      // render_target[i+1] = supersample_render_target[4*sample_rate_sq*i + 1];
+      // render_target[i] = supersample_render_target[4*sample_rate_sq*i + 2];
+      // render_target[i] = supersample_render_target[4*sample_rate_sq*i + 3];
 
     }
-    
-    if (i == 5) {
-      std::vector<int> a;
-      a = {0,1,2,3,4};
-
-      std::vector<int> b;
-      b = {-2,-2,-2};
-
-      int tmpout = std::inner_product(a.begin(), a.begin()+3, b.begin(), 0);
-      printf("practice inner product: %d", tmpout);
-
-      tmpout = std::inner_product(a.begin()+1, a.begin()+3+1, b.begin(), 0);
-      printf("practice inner product: %d", tmpout);
-
-    }
-
-    // if (i == 1 || i == 3 || i == 1000) {
-    //   printf("we're at %d, and out inner product is: %d\n", i, render_target[i]);
-    //   float printingOut = std::inner_product(supersample_render_target.begin()+i, supersample_render_target.begin()+i+filter_len, filter_mask.begin(), 0);
-    //   printf("Custom output: %f\n", printingOut);
-
-    //   printf("First few mask elements: \n");
-
-    //   for (int tmpprint = 0; tmpprint < 20; tmpprint++) {
-    //     printf("%d", filter_mask[tmpprint]);
-    //   }
-    //   printf("\n");
-
-    //   printf("First few supersample elements: \n");
-    //   for (int tmpprint = 0; tmpprint < 20; tmpprint++) {
-    //     printf("%d", supersample_render_target[tmpprint]);
-    //   }
-    //   printf("\n");
-
-    // }
-
-
-
   }
 
-
   std::fill(supersample_render_target.begin(), supersample_render_target.end(), 0); // Fill super_render_target with 0s so we can reset it!
-  
 
-
-  
-
-
-  // Yucky nested for loop implementation
-  // for (int i = 0; i < target_h; i++) {
-  //   for (int j = 0; j < target_w; i++) {
-  //     tempPixelSum = {0,0,0,0};
-  //     for (int supIter = 0; supIter < sample_rate; supIter++) {
-  //       tempPixelSum[0] += supersample_render_target[4 * (j*sample_rate + i*supersample_width*sample_rate + supIter)];
-  //       tempPixelSum[0] += supersample_render_target[4 * (j*sample_rate + i*supersample_width*sample_rate + supIter) + 1];
-  //       tempPixelSum[0] += supersample_render_target[4 * (j*sample_rate + i*supersample_width*sample_rate + supIter) + 2];
-  //       tempPixelSum[0] += supersample_render_target[4 * (j*sample_rate + i*supersample_width*sample_rate + supIter) + 3];
-  //     }
-  //     render_target[4 * (j + i*target_w )] = tempSum / sample_rate;
-      
-  //   }
-  // }
-
+    
   return;
 
 }
