@@ -18,6 +18,7 @@ namespace CS248 {
 std::vector<unsigned char> supersample_render_target;
 size_t supersample_width = 0;
 size_t supersample_height = 0;
+Matrix3x3 saved_transformation;
 
 
 // Implements SoftwareRenderer //
@@ -123,6 +124,15 @@ void SoftwareRendererImp::draw_svg( SVG& svg ) {
   // set top level transformation
   transformation = canvas_to_screen;
 
+  printf("canvas to screen transform: \n");
+  for (int i = 0; i < 3; i++) {
+    for (int j = 0; j < 3; j++) {
+      printf(" %d ", transformation[i][j]);
+    }
+    printf("\n");
+  }
+
+
   // draw all elements
   for ( size_t i = 0; i < svg.elements.size(); ++i ) {
     draw_element(svg.elements[i]);
@@ -191,6 +201,36 @@ void SoftwareRendererImp::draw_element( SVGElement* element ) {
 	// Task 3 (part 1):
 	// Modify this to implement the transformation stack
 
+  // the function transform() takes 2D points and is called by all of the subfunctions
+  // transform() applies the global variable "transformation" to all of the 2D points
+  // --> So the "transform stack" really just involves updating the transformation variable with matrices, then resetting it to a prev value 
+
+  // printf("here we are\n");
+  // printf("type: %u\n", element->type); // type == unsigned int
+
+  // for (int i = 0; i < 3; i++) {
+  //   for (int j = 0; j < 3; j++) {
+  //     printf(" %d ", element->transform[i][j]);
+  //   }
+  //   printf("\n");
+  // }
+
+  saved_transformation = transformation;
+  printf("trying 1\n");
+  custom_print_matrix(transformation);
+  printf("trying 2\n");
+  custom_print_matrix(saved_transformation);
+
+  printf("\n");
+
+  printf("another one\n");
+  transformation[0][2] = 777;
+  saved_transformation[2,1] = -5;
+  custom_print_matrix(transformation);
+  custom_print_matrix(saved_transformation);
+  
+
+
 	switch (element->type) {
 	case POINT:
 		draw_point(static_cast<Point&>(*element));
@@ -214,6 +254,7 @@ void SoftwareRendererImp::draw_element( SVGElement* element ) {
 		draw_image(static_cast<Image&>(*element));
 		break;
 	case GROUP:
+    printf("We have a group!\n");
 		draw_group(static_cast<Group&>(*element));
 		break;
 	default:
@@ -545,6 +586,16 @@ void SoftwareRendererImp::rasterize_image( float x0, float y0,
   // Task 4: 
   // Implement image rasterization (you may want to call fill_sample here)
 
+}
+
+void SoftwareRendererImp::custom_print_matrix(Matrix3x3& func_mat) {
+  printf("Printing 3D matrix:\n");
+  for (int i = 0; i < 3; i++) {
+    for (int j = 0; j < 3; j++) {
+      printf(" %d ", func_mat[j][j]);
+    }
+    printf("\n");
+  }
 }
 
 // resolve samples to render target

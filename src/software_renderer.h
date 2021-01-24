@@ -99,6 +99,8 @@ private:
 
 	// Primitive Drawing //
 
+	void custom_print_matrix(Matrix3x3& func_mat);
+
 	// Draws an SVG element
 	void draw_element(SVGElement* element);
 
