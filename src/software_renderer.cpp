@@ -15,7 +15,7 @@ using namespace std;
 namespace CS248 {
 
 // Global variable definitions!
-std::vector<int> supersample_render_target;
+std::vector<unsigned char> supersample_render_target;
 size_t supersample_width = 0;
 size_t supersample_height = 0;
 
@@ -366,6 +366,8 @@ void SoftwareRendererImp::rasterize_triangle( float x0, float y0,
   //    3) Iterate through points and check that the triple bounding condition is met
   //      --> If met, call fill_sample
 
+  printf("sample rate = %d", sample_rate);
+
   float ss_x0 = x0*sample_rate;
   float ss_y0 = y0*sample_rate;
   float ss_x1 = x1*sample_rate;
@@ -403,94 +405,102 @@ void SoftwareRendererImp::rasterize_triangle( float x0, float y0,
   // Iterate in row-dominant form
   // First, set up all of the 'inside line' based dot product equations
   float sample_x, sample_y;
-  int L_i[3];
+  float L_i[3];
   bool in_triangle;
 
   // CHECK! If there's an error with task 1 output, check the triangle windings thing... might be the reason
-  int A[3] = {ss_y1 - ss_y0, 
+  float A[3] = {ss_y1 - ss_y0, 
               ss_y2 - ss_y1,
               ss_y0 - ss_y2}; // windings line
-  int B[3] = {ss_x1 - ss_x0,
+  float B[3] = {ss_x1 - ss_x0,
               ss_x2 - ss_x1,
               ss_x0 - ss_x2}; // windings line
-  int C[3] = {ss_y0*B[0] - ss_x0*A[0],
+  float C[3] = {ss_y0*B[0] - ss_x0*A[0],
               ss_y1*B[1] - ss_x1*A[1],
               ss_y2*B[2] - ss_x2*A[2]};
 
 
 
-  // Attempting fast incremental update
-  // Instead of calculating all L_i every loop, we just calculate the first one and add whatever we need 
-  // CHECK! Attempted to make it faster...not sure if it is with all the extra assigns and stuffsample_rate
-  int prev_L_i[3];
-  float og_sample_x = col_iter_Lo_bound + 0.5;
-  float og_sample_y = row_iter_Lo_bound + 0.5;
-  int delta_iters = 0;
-  prev_L_i[0] = A[0]*og_sample_x - B[0]*og_sample_y + C[0];
-  prev_L_i[1] = A[1]*og_sample_x - B[1]*og_sample_y + C[1];
-  prev_L_i[2] = A[2]*og_sample_x - B[2]*og_sample_y + C[2];
+  // // Attempting fast incremental update
+  // // Instead of calculating all L_i every loop, we just calculate the first one and add whatever we need 
+  // // CHECK! Attempted to make it faster...not sure if it is with all the extra assigns and stuffsample_rate
+  // float prev_L_i[3];
+  // float og_sample_x = col_iter_Lo_bound + 0.5;
+  // float og_sample_y = row_iter_Lo_bound + 0.5;
+  // int delta_iters = 0;
+  // prev_L_i[0] = A[0]*og_sample_x - B[0]*og_sample_y + C[0];
+  // prev_L_i[1] = A[1]*og_sample_x - B[1]*og_sample_y + C[1];
+  // prev_L_i[2] = A[2]*og_sample_x - B[2]*og_sample_y + C[2];
+
+  // float bound_to_check = 0.01;
 
 
+  // for (int count_row = row_iter_Lo_bound; count_row < row_iter_Hi_bound; count_row++) {
+  //   for (int count_col = col_iter_Lo_bound; count_col < col_iter_Hi_bound; count_col++) {
+
+  //     sample_x = count_col + 0.5;
+  //     sample_y = count_row + 0.5;
+
+  //     if ((count_col == col_iter_Lo_bound+1) && (count_row == row_iter_Lo_bound+1)) {
+  //       printf("sample_x = %f", sample_x);
+  //       printf("count_col = %d", count_col);
+  //     }
+
+  //     in_triangle = (prev_L_i[0] <= bound_to_check) && (prev_L_i[1] <= bound_to_check) && (prev_L_i[2] <= bound_to_check);
+
+  //     if ( in_triangle ) {
+  //       fill_sample(count_col, count_row, color); // If we made it here, we're in the triangle, so Color it!
+  //     }
+
+  //     prev_L_i[0] += A[0];
+  //     prev_L_i[1] += A[1];
+  //     prev_L_i[2] += A[2];
+
+  //   }
+
+  //   prev_L_i[0] -= B[0];
+  //   prev_L_i[1] -= B[1];
+  //   prev_L_i[2] -= B[2];
+
+  //   delta_iters = (col_iter_Hi_bound - col_iter_Lo_bound);
+
+  //   prev_L_i[0] -= delta_iters*A[0];
+  //   prev_L_i[1] -= delta_iters*A[1];
+  //   prev_L_i[2] -= delta_iters*A[2];
+
+  // }
+
+
+
+  // Original method!
   for (int count_row = row_iter_Lo_bound; count_row < row_iter_Hi_bound; count_row++) {
     for (int count_col = col_iter_Lo_bound; count_col < col_iter_Hi_bound; count_col++) {
 
       sample_x = count_col + 0.5;
       sample_y = count_row + 0.5;
 
-      in_triangle = (prev_L_i[0] <= 0) && (prev_L_i[1] <= 0) && (prev_L_i[2] <= 0);
+
+      for(int ixx = 0; ixx < 3; ixx++) {
+        L_i[ixx] =  A[ixx]*sample_x - B[ixx]*sample_y + C[ixx];
+        // if (L_i[ixx] == 0) {
+        //   // We have encountered a literal edge case!
+        //   // Let's consistently count it as 'inside'
+        //   L_i[ixx] = -1;
+        //   cout << "This happened";
+        //   // CHECK! Is this how we're supposed to handle the literal 'edge cases'??
+        // }
+      }
+
+      // in_triangle = (L_i[0] <= 0.001) && (L_i[1] <= 0.001) && (L_i[2] <= 0.001);
+      in_triangle = (L_i[0] <= 0) && (L_i[1] <= 0) && (L_i[2] <= 0);
 
       if ( in_triangle ) {
         fill_sample(count_col, count_row, color); // If we made it here, we're in the triangle, so Color it!
       }
 
-      prev_L_i[0] += A[0];
-      prev_L_i[1] += A[1];
-      prev_L_i[2] += A[2];
-
     }
 
-    prev_L_i[0] -= B[0];
-    prev_L_i[1] -= B[1];
-    prev_L_i[2] -= B[2];
-
-    delta_iters = (col_iter_Hi_bound - col_iter_Lo_bound);
-
-    prev_L_i[0] -= delta_iters*A[0];
-    prev_L_i[1] -= delta_iters*A[1];
-    prev_L_i[2] -= delta_iters*A[2];
-
   }
-
-
-
-  // // Original method!
-  // for (int count_row = 0; count_row < row_iter_bound; count_row++) {
-  //   for (int count_col = 0; count_col < col_iter_bound; count_col++) {
-
-  //     sample_x = count_col + 0.5;
-  //     sample_y = count_row + 0.5;
-
-
-  //     for(int ixx = 0; ixx < 3; ixx++) {
-  //       L_i[ixx] =  A[ixx]*sample_x - B[ixx]*sample_y + C[ixx];
-  //       if (L_i[ixx] == 0) {
-  //         // We have encountered a literal edge case!
-  //         // Let's consistently count it as 'inside'
-  //         L_i[ixx] = -1;
-  //         cout << "This happened";
-  //         // CHECK! Is this how we're supposed to handle the literal 'edge cases'??
-  //       }
-  //     }
-
-  //     in_triangle = (L_i[0] < 0) && (L_i[1] < 0) && (L_i[2] < 0);
-
-  //     if ( in_triangle ) {
-  //       fill_sample(count_col, count_row, color); // If we made it here, we're in the triangle, so Color it!
-  //     }
-
-  //   }
-
-  // }
 
 
 
@@ -521,9 +531,9 @@ void SoftwareRendererImp::resolve( void ) {
 
 
   // CHECK! Come back and change filter and supersample types to be unsigned char to optimize
-  std::vector<int> filter_mask;
+  std::vector<unsigned char> filter_mask;
   printf("width is %d\n", (int)supersample_width);
-  filter_mask.resize( sample_rate*(supersample_width + 4) ); // simplified from sample_rate*supersample_width + sample_rate*4
+  filter_mask.resize( 4*sample_rate*(supersample_width + 1) ); // simplified from sample_rate*supersample_width + sample_rate*4
 
   // std::fill(filter_mask.begin(), filter_mask.end(), 0);
   // filter_mask = {0}; // Initialize all elemenets to 0
@@ -571,10 +581,10 @@ void SoftwareRendererImp::resolve( void ) {
       indx_supsamp_target = 4*sample_rate*(i*supersample_width + j);
 
     
-      render_target[indx_target] = std::inner_product(supersample_render_target.begin()+indx_supsamp_target, supersample_render_target.begin()+indx_supsamp_target+filter_len, filter_mask.begin(), 0) / sample_rate;
-      render_target[indx_target+1] = std::inner_product(supersample_render_target.begin()+indx_supsamp_target+1, supersample_render_target.begin()+indx_supsamp_target+1+filter_len, filter_mask.begin(), 0) / sample_rate;
-      render_target[indx_target+2] = std::inner_product(supersample_render_target.begin()+indx_supsamp_target+2, supersample_render_target.begin()+indx_supsamp_target+2+filter_len, filter_mask.begin(), 0) / sample_rate;
-      render_target[indx_target+3] = std::inner_product(supersample_render_target.begin()+indx_supsamp_target+3, supersample_render_target.begin()+indx_supsamp_target+3+filter_len, filter_mask.begin(), 0) / sample_rate;
+      render_target[indx_target] = std::inner_product(supersample_render_target.begin()+indx_supsamp_target, supersample_render_target.begin()+indx_supsamp_target+filter_len, filter_mask.begin(), 0) / sample_rate_sq;
+      render_target[indx_target+1] = std::inner_product(supersample_render_target.begin()+indx_supsamp_target+1, supersample_render_target.begin()+indx_supsamp_target+1+filter_len, filter_mask.begin(), 0) / sample_rate_sq;
+      render_target[indx_target+2] = std::inner_product(supersample_render_target.begin()+indx_supsamp_target+2, supersample_render_target.begin()+indx_supsamp_target+2+filter_len, filter_mask.begin(), 0) / sample_rate_sq;
+      render_target[indx_target+3] = std::inner_product(supersample_render_target.begin()+indx_supsamp_target+3, supersample_render_target.begin()+indx_supsamp_target+3+filter_len, filter_mask.begin(), 0) / sample_rate_sq;
 
 
       // render_target[i] = supersample_render_target[4*sample_rate_sq*i];
