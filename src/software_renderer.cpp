@@ -18,7 +18,7 @@ namespace CS248 {
 std::vector<unsigned char> supersample_render_target;
 size_t supersample_width = 0;
 size_t supersample_height = 0;
-Matrix3x3 saved_transformation;
+
 
 
 // Implements SoftwareRenderer //
@@ -205,29 +205,23 @@ void SoftwareRendererImp::draw_element( SVGElement* element ) {
   // transform() applies the global variable "transformation" to all of the 2D points
   // --> So the "transform stack" really just involves updating the transformation variable with matrices, then resetting it to a prev value 
 
-  // printf("here we are\n");
-  // printf("type: %u\n", element->type); // type == unsigned int
-
-  // for (int i = 0; i < 3; i++) {
-  //   for (int j = 0; j < 3; j++) {
-  //     printf(" %d ", element->transform[i][j]);
-  //   }
-  //   printf("\n");
-  // }
-
+  // Create new matrix3x3 so that we can recursively keep track of the different transforms (ie keep it in local scope)
+  Matrix3x3 saved_transformation;
   saved_transformation = transformation;
-  printf("trying 1\n");
-  custom_print_matrix(transformation);
-  printf("trying 2\n");
-  custom_print_matrix(saved_transformation);
 
-  printf("\n");
 
-  printf("another one\n");
-  transformation[0][2] = 777;
-  saved_transformation[2,1] = -5;
-  custom_print_matrix(transformation);
-  custom_print_matrix(saved_transformation);
+  // printf("  %f %f %f\n", transformation[0][0], transformation[0][1], transformation[0][2]);
+  // printf("  %f %f %f\n", transformation[1][0], transformation[1][1], transformation[1][2]);
+  // printf("  %f %f %f\n", transformation[2][0], transformation[2][1], transformation[2][2]);
+
+  // printf("  %f %f %f\n", saved_transformation[0][0], saved_transformation[0][1], saved_transformation[0][2]);
+  // printf("  %f %f %f\n", saved_transformation[1][0], saved_transformation[1][1], saved_transformation[1][2]);
+  // printf("  %f %f %f\n", saved_transformation[2][0], saved_transformation[2][1], saved_transformation[2][2]);
+  
+  // custom_print_matrix(transformation);
+  // custom_print_matrix(saved_transformation);
+
+  transformation = transformation*element->transform;
   
 
 
@@ -260,6 +254,8 @@ void SoftwareRendererImp::draw_element( SVGElement* element ) {
 	default:
 		break;
 	}
+
+  transformation = saved_transformation;
 
 }
 
@@ -544,6 +540,19 @@ void SoftwareRendererImp::rasterize_triangle( float x0, float y0,
   // }
 
 
+  // Before we iterate points, need to check if the triangle is clockwise or CCW!
+  // Do a "point in triangle" side test between P0-P1 and P0-P2!
+  // If P2 is "inside" (L < 0), then do CCW (L < 0). Otherwise, do CW (L > 0)
+  float alt_L = A[0]*ss_x2 - B[0]*ss_y2 + C[0];
+  bool is_CCW_flag = true;
+  if (alt_L <= 0) {
+    is_CCW_flag = true;
+  } else {
+    is_CCW_flag = false;
+  }
+
+
+
 
   // Original method!
   for (int count_row = row_iter_Lo_bound; count_row < row_iter_Hi_bound; count_row++) {
@@ -564,8 +573,13 @@ void SoftwareRendererImp::rasterize_triangle( float x0, float y0,
         // }
       }
 
-      // in_triangle = (L_i[0] <= 0.001) && (L_i[1] <= 0.001) && (L_i[2] <= 0.001);
-      in_triangle = (L_i[0] <= 0) && (L_i[1] <= 0) && (L_i[2] <= 0);
+      if (is_CCW_flag) {
+        in_triangle = (L_i[0] <= 0) && (L_i[1] <= 0) && (L_i[2] <= 0);
+      } else {
+        in_triangle = (L_i[0] >= 0) && (L_i[1] >= 0) && (L_i[2] >= 0);
+      }
+      // in_triangle = (L_i[0] > 0) && (L_i[1] > 0) && (L_i[2] > 0);
+      // in_triangle = (L_i[0] <= 0) && (L_i[1] <= 0) && (L_i[2] <= 0);
 
       if ( in_triangle ) {
         fill_sample(count_col, count_row, color); // If we made it here, we're in the triangle, so Color it!
@@ -592,7 +606,7 @@ void SoftwareRendererImp::custom_print_matrix(Matrix3x3& func_mat) {
   printf("Printing 3D matrix:\n");
   for (int i = 0; i < 3; i++) {
     for (int j = 0; j < 3; j++) {
-      printf(" %d ", func_mat[j][j]);
+      printf(" %f ", func_mat[j][j]);
     }
     printf("\n");
   }
