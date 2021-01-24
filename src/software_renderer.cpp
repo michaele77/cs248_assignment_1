@@ -60,29 +60,61 @@ void SoftwareRendererImp::fill_pixel(int x, int y, const Color &color) {
 
 	// Task 2: Re-implement this function
 
-	// check bounds
-	if (x < 0 || x >= target_w) return;
-	if (y < 0 || y >= target_h) return;
+  // Re-implemented with super sample buffer!
+  // To avoid the thinness or "greying out" of lines and points, 
+
+  int sx = sample_rate*x;
+  int sy = sample_rate*y;
+
+  if (sx < 0 || sx >= supersample_width) return;
+	if (sy < 0 || sy >= supersample_height) return;
 
 	Color pixel_color;
 	float inv255 = 1.0 / 255.0;
-	pixel_color.r = render_target[4 * (x + y * target_w)] * inv255;
-	pixel_color.g = render_target[4 * (x + y * target_w) + 1] * inv255;
-	pixel_color.b = render_target[4 * (x + y * target_w) + 2] * inv255;
-	pixel_color.a = render_target[4 * (x + y * target_w) + 3] * inv255;
+  int base_indx = 4 * (sx + sy * supersample_width);
+
+  for (int i = 0; i < sample_rate; i++) {
+    for (int j = 0; j < sample_rate; j++) {
+      pixel_color.r = supersample_render_target[base_indx + j*4 + i*supersample_width*4] * inv255;
+      pixel_color.g = supersample_render_target[base_indx + j*4 + i*supersample_width*4 + 1] * inv255;
+      pixel_color.b = supersample_render_target[base_indx + j*4 + i*supersample_width*4 + 2] * inv255;
+      pixel_color.a = supersample_render_target[base_indx + j*4 + i*supersample_width*4 + 3] * inv255;
+    } 
+  }
+	
 
 	pixel_color = ref->alpha_blending_helper(pixel_color, color);
 
-	render_target[4 * (x + y * target_w)] = (uint8_t)(pixel_color.r * 255);
-	render_target[4 * (x + y * target_w) + 1] = (uint8_t)(pixel_color.g * 255);
-	render_target[4 * (x + y * target_w) + 2] = (uint8_t)(pixel_color.b * 255);
-	render_target[4 * (x + y * target_w) + 3] = (uint8_t)(pixel_color.a * 255);
+  for (int i = 0; i < sample_rate; i++) {
+    for (int j = 0; j < sample_rate; j++) {
+      supersample_render_target[base_indx + j*4 + i*supersample_width*4] = (uint8_t)(pixel_color.r * 255);
+      supersample_render_target[base_indx + j*4 + i*supersample_width*4 + 1] = (uint8_t)(pixel_color.g * 255);
+      supersample_render_target[base_indx + j*4 + i*supersample_width*4 + 2] = (uint8_t)(pixel_color.b * 255);
+      supersample_render_target[base_indx + j*4 + i*supersample_width*4 + 3] = (uint8_t)(pixel_color.a * 255);
+    } 
+  }
+
+	
 
 
-  // supersample_render_target[4 * (x + y * target_w)] = (uint8_t)(pixel_color.r * 255);
-	// supersample_render_target[4 * (x + y * target_w) + 1] = (uint8_t)(pixel_color.g * 255);
-	// supersample_render_target[4 * (x + y * target_w) + 2] = (uint8_t)(pixel_color.b * 255);
-	// supersample_render_target[4 * (x + y * target_w) + 3] = (uint8_t)(pixel_color.a * 255);
+  // // See below for old implemetation
+	// // check bounds
+	// if (x < 0 || x >= target_w) return;
+	// if (y < 0 || y >= target_h) return;
+
+	// Color pixel_color;
+	// float inv255 = 1.0 / 255.0;
+	// pixel_color.r = render_target[4 * (x + y * target_w)] * inv255;
+	// pixel_color.g = render_target[4 * (x + y * target_w) + 1] * inv255;
+	// pixel_color.b = render_target[4 * (x + y * target_w) + 2] * inv255;
+	// pixel_color.a = render_target[4 * (x + y * target_w) + 3] * inv255;
+
+	// pixel_color = ref->alpha_blending_helper(pixel_color, color);
+
+	// render_target[4 * (x + y * target_w)] = (uint8_t)(pixel_color.r * 255);
+	// render_target[4 * (x + y * target_w) + 1] = (uint8_t)(pixel_color.g * 255);
+	// render_target[4 * (x + y * target_w) + 2] = (uint8_t)(pixel_color.b * 255);
+	// render_target[4 * (x + y * target_w) + 3] = (uint8_t)(pixel_color.a * 255);
 
 }
 
