@@ -52,6 +52,7 @@ void SoftwareRendererImp::fill_sample(int sx, int sy, const Color &color) {
   pixel_color.b = (float) color.b;
   pixel_color.a = (float) color.a; 
 
+  // CHECK! Technically, we dont need to do alpha blending for fill_sample i think --> performance boost
 	pixel_color = ref->alpha_blending_helper(pixel_color, color);
 
   supersample_render_target[4 * (sx + sy * supersample_width)] = (uint8_t)(pixel_color.r * 255);
@@ -65,154 +66,65 @@ void SoftwareRendererImp::fill_sample(int sx, int sy, const Color &color) {
 // fill samples in the entire pixel specified by pixel coordinates
 void SoftwareRendererImp::fill_pixel(int x, int y, const Color &color) {
 
+  printf("Filing a pixelll");
+
 	// Task 2: Re-implement this function
 
-  if (x < 0 || x >= target_w) return;
-	if (y < 0 || y >= target_h) return;
+  // if (x < 0 || x >= target_w) return;
+	// if (y < 0 || y >= target_h) return;
 
-	Color pixel_color;
-	float inv255 = 1.0 / 255.0;
-	pixel_color.r = render_target[4 * (x + y * target_w)] * inv255;
-	pixel_color.g = render_target[4 * (x + y * target_w) + 1] * inv255;
-	pixel_color.b = render_target[4 * (x + y * target_w) + 2] * inv255;
-	pixel_color.a = render_target[4 * (x + y * target_w) + 3] * inv255;
+	// Color pixel_color;
+	// float inv255 = 1.0 / 255.0;
+	// pixel_color.r = render_target[4 * (x + y * target_w)] * inv255;
+	// pixel_color.g = render_target[4 * (x + y * target_w) + 1] * inv255;
+	// pixel_color.b = render_target[4 * (x + y * target_w) + 2] * inv255;
+	// pixel_color.a = render_target[4 * (x + y * target_w) + 3] * inv255;
 
-	pixel_color = ref->alpha_blending_helper(pixel_color, color);
+	// pixel_color = ref->alpha_blending_helper(pixel_color, color);
 
-	render_target[4 * (x + y * target_w)] = (uint8_t)(pixel_color.r * 255);
-	render_target[4 * (x + y * target_w) + 1] = (uint8_t)(pixel_color.g * 255);
-	render_target[4 * (x + y * target_w) + 2] = (uint8_t)(pixel_color.b * 255);
-	render_target[4 * (x + y * target_w) + 3] = (uint8_t)(pixel_color.a * 255);
+	// render_target[4 * (x + y * target_w)] = (uint8_t)(pixel_color.r * 255);
+	// render_target[4 * (x + y * target_w) + 1] = (uint8_t)(pixel_color.g * 255);
+	// render_target[4 * (x + y * target_w) + 2] = (uint8_t)(pixel_color.b * 255);
+	// render_target[4 * (x + y * target_w) + 3] = (uint8_t)(pixel_color.a * 255);
 
   // // Re-implemented with super sample buffer!
   // // To avoid the thinness or "greying out" of lines and points, 
 
   
 
-  // int sx = sample_rate*x;
-  // int sy = sample_rate*y;
+  int sx = sample_rate*x;
+  int sy = sample_rate*y;
 
-  // if (sx < 0 || sx >= supersample_width) return;
-	// if (sy < 0 || sy >= supersample_height) return;
+  if (sx < 0 || sx >= supersample_width) return;
+	if (sy < 0 || sy >= supersample_height) return;
 
-  // int base_indx = 4 * (sx + sy * supersample_width);
+  Color pixel_color;
+	float inv255 = 1.0 / 255.0;
 
-  // cntrrr += 1;
-  // printf("cntr is at %d", cntrrr);
+  int base_indx = 4 * (sx + sy * supersample_width);
 
-  // // for (int i = 0; i < sample_rate; i++) {
-  // //   for (int j = 0; j < sample_rate; j++) {
-  // //     supersample_render_target[base_indx + j*4 + i*supersample_width*4] = (uint8_t)(color.r * 255);
-  // //     supersample_render_target[base_indx + j*4 + i*supersample_width*4 + 1] = (uint8_t)(color.g * 255);
-  // //     supersample_render_target[base_indx + j*4 + i*supersample_width*4 + 2] = (uint8_t)(color.b * 255);
-  // //     supersample_render_target[base_indx + j*4 + i*supersample_width*4 + 3] = (uint8_t)(color.a * 255);
-  // //   } 
-  // // }
+
+  pixel_color.r = supersample_render_target[4 * (sx + sy * supersample_width)] * inv255;
+	pixel_color.g = supersample_render_target[4 * (sx + sy * supersample_width) + 1] * inv255;
+	pixel_color.b = supersample_render_target[4 * (sx + sy * supersample_width) + 2] * inv255;
+	pixel_color.a = supersample_render_target[4 * (sx + sy * supersample_width) + 3] * inv255;
 
 
 
-	// Color pixel_color;
-	// float inv255 = 1.0 / 255.0;
-  
-
-  // // for (int i = 0; i < sample_rate; i++) {
-  // //   for (int j = 0; j < sample_rate; j++) {
-  // //     pixel_color.r = supersample_render_target[base_indx + j*4 + i*supersample_width*4] * inv255;
-  // //     pixel_color.g = supersample_render_target[base_indx + j*4 + i*supersample_width*4 + 1] * inv255;
-  // //     pixel_color.b = supersample_render_target[base_indx + j*4 + i*supersample_width*4 + 2] * inv255;
-  // //     pixel_color.a = supersample_render_target[base_indx + j*4 + i*supersample_width*4 + 3] * inv255;
-  // //   } 
-  // // }
-
-  // // for (int i = 0; i < sample_rate; i++) {
-  // //   for (int j = 0; j < sample_rate; j++) {
-  // pixel_color.r = (float) color.r;
-  // pixel_color.g = (float) color.g;
-  // pixel_color.b = (float) color.b;
-  // pixel_color.a = (float) color.a;
-
-  // // if (pixel_color.r > 0 || pixel_color.g > 0 || pixel_color.b > 0 || pixel_color.a > 0) {
-  // //   printf("Drawing a pixel: %d, %d ---->  %d\n", sx, sy, supersample_render_target[base_indx + 0*4 + 0*supersample_width*4 + 2]);
-
-  // //   printf("%d\n", (int) floor(color.a*255));
-  // // }
-      
-  // //   } 
-  // // }
-	
-
-	// pixel_color = ref->alpha_blending_helper(pixel_color, color);
-
-  // // if (pixel_color.a > 0) {
-  // //   printf("second breakpoint: %d\n", (uint8_t)floor(pixel_color.a*255));
-  // // }
-
-  // // supersample_render_target[base_indx] = (uint8_t)floor(pixel_color.r * 255);
-  // // supersample_render_target[base_indx + 1] = (uint8_t)floor(pixel_color.g * 255);
-  // // supersample_render_target[base_indx + 2] = (uint8_t)floor(pixel_color.b * 255);
-  // // supersample_render_target[base_indx + 3] = (uint8_t)floor(pixel_color.a * 255);
-      
-
-  // for (int i = 0; i < sample_rate; i++) {
-  //   for (int j = 0; j < sample_rate; j++) {
-  //     supersample_render_target[base_indx + j*4 + i*supersample_width*4] = (uint8_t)floor(pixel_color.r * 255);
-  //     supersample_render_target[base_indx + j*4 + i*supersample_width*4 + 1] = (uint8_t)floor(pixel_color.g * 255);
-  //     supersample_render_target[base_indx + j*4 + i*supersample_width*4 + 2] = (uint8_t)floor(pixel_color.b * 255);
-  //     supersample_render_target[base_indx + j*4 + i*supersample_width*4 + 3] = (uint8_t)floor(pixel_color.a * 255);
-  //   } 
-  // }
+  pixel_color = ref->alpha_blending_helper(pixel_color, color);
 
 
-  // // for (int addi = 0; addi < 20*sample_rate; addi++) {
-  // //   for (int addj = 0; addj < 20*sample_rate; addj++) {
-  // //     sx = 500*sample_rate + addi;
-  // //     sy = 1000*sample_rate + addj;
-  // //     base_indx = 4 * (sx + sy * supersample_width);
-
-  // //     pixel_color.r = .2;
-  // //     pixel_color.g = .5;
-  // //     pixel_color.b = .3;
-  // //     pixel_color.a = .2;
-
-  // //     for (int i = 0; i < sample_rate; i++) {
-  // //       for (int j = 0; j < sample_rate; j++) {
-  // //         supersample_render_target[base_indx + j*4 + i*supersample_width*4] = (uint8_t)floor(pixel_color.r * 255);
-  // //         supersample_render_target[base_indx + j*4 + i*supersample_width*4 + 1] = (uint8_t)floor(pixel_color.g * 255);
-  // //         supersample_render_target[base_indx + j*4 + i*supersample_width*4 + 2] = (uint8_t)floor(pixel_color.b * 255);
-  // //         supersample_render_target[base_indx + j*4 + i*supersample_width*4 + 3] = (uint8_t)floor(pixel_color.a * 255);
-  // //       } 
-  // //     }
-  // //   }  
-  // // }
+  for (int i = 0; i < sample_rate; i++) {
+    for (int j = 0; j < sample_rate; j++) {
+      supersample_render_target[base_indx + j*4 + i*supersample_width*4] = (uint8_t)(pixel_color.r * 255);
+      supersample_render_target[base_indx + j*4 + i*supersample_width*4 + 1] = (uint8_t)(pixel_color.g * 255);
+      supersample_render_target[base_indx + j*4 + i*supersample_width*4 + 2] = (uint8_t)(pixel_color.b * 255);
+      supersample_render_target[base_indx + j*4 + i*supersample_width*4 + 3] = (uint8_t)(pixel_color.a * 255);
+    } 
+  }
 
 
-  
-    
 
-  
-
-  
-	
-
-
-  // // // See below for old implemetation
-	// // // check bounds
-	// // if (x < 0 || x >= target_w) return;
-	// // if (y < 0 || y >= target_h) return;
-
-	// // Color pixel_color;
-	// // float inv255 = 1.0 / 255.0;
-	// // pixel_color.r = render_target[4 * (x + y * target_w)] * inv255;
-	// // pixel_color.g = render_target[4 * (x + y * target_w) + 1] * inv255;
-	// // pixel_color.b = render_target[4 * (x + y * target_w) + 2] * inv255;
-	// // pixel_color.a = render_target[4 * (x + y * target_w) + 3] * inv255;
-
-	// // pixel_color = ref->alpha_blending_helper(pixel_color, color);
-
-	// // render_target[4 * (x + y * target_w)] = (uint8_t)(pixel_color.r * 255);
-	// // render_target[4 * (x + y * target_w) + 1] = (uint8_t)(pixel_color.g * 255);
-	// // render_target[4 * (x + y * target_w) + 2] = (uint8_t)(pixel_color.b * 255);
-	// // render_target[4 * (x + y * target_w) + 3] = (uint8_t)(pixel_color.a * 255);
 
 }
 
@@ -241,8 +153,7 @@ void SoftwareRendererImp::draw_svg( SVG& svg ) {
   Vector2D c = transform(Vector2D(    0    ,svg.height)); c.x--; c.y++;
   Vector2D d = transform(Vector2D(svg.width,svg.height)); d.x++; d.y++;
 
-  printf("Were rasterizing some lines \n");
-  printf("%f, %f, %f, %f, %f, %f, %f, %f", a.x, a.y, b.x, b.y, d.x, d.y, c.x, c.y);
+
   rasterize_line(a.x, a.y, b.x, b.y, Color::Black);
   rasterize_line(a.x, a.y, c.x, c.y, Color::Black);
   rasterize_line(d.x, d.y, b.x, b.y, Color::Black);
@@ -502,14 +413,11 @@ void SoftwareRendererImp::rasterize_point( float x, float y, Color color ) {
   // render_target[4 * (sx + sy * target_w) + 2] = (uint8_t)(color.b * 255);
   // render_target[4 * (sx + sy * target_w) + 3] = (uint8_t)(color.a * 255);
 
-  // supersample_render_target[4 * (sx + sy * supersample_width)] = (uint8_t)(color.r * 255);
-  // supersample_render_target[4 * (sx + sy * supersample_width) + 1] = (uint8_t)(color.g * 255);
-  // supersample_render_target[4 * (sx + sy * supersample_width) + 2] = (uint8_t)(color.b * 255);
-  // supersample_render_target[4 * (sx + sy * supersample_width) + 3] = (uint8_t)(color.a * 255);
+  supersample_render_target[4 * (sx + sy * supersample_width)] = (uint8_t)(color.r * 255);
+  supersample_render_target[4 * (sx + sy * supersample_width) + 1] = (uint8_t)(color.g * 255);
+  supersample_render_target[4 * (sx + sy * supersample_width) + 2] = (uint8_t)(color.b * 255);
+  supersample_render_target[4 * (sx + sy * supersample_width) + 3] = (uint8_t)(color.a * 255);
 
-  if (color.r > 0) {
-    printf("we're here!\n");
-  }
 
   // Alpha blending function
   // Want this to be after we fill the frame buffer because fill_pixel refers to what's at the frame buffer already and applies alpha to that
@@ -855,6 +763,8 @@ void SoftwareRendererImp::resolve( void ) {
   }
 
   for (int i = 0; i < render_target_length; i++) {
+    // CHECK!
+    // issue: if this is +=, then we get pink colors and a bunch of screwed up stuff! Need to assign/overwrite!
     render_target[i] = round(blur_buffer[i]);
   }
 

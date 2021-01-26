@@ -41,6 +41,8 @@ void ViewportImp::set_viewbox( float x, float y, float span ) {
 
   // this->x = u_out.x;
   // this->y = u_out.y;
+  // CHECK!
+  // issue: MODIFY MATRIX svg_2_norm NOT X,Y YOU DUMMY
   this->x = x;
   this->y = y;
   this->span = span; 
