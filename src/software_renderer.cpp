@@ -66,7 +66,6 @@ void SoftwareRendererImp::fill_sample(int sx, int sy, const Color &color) {
 // fill samples in the entire pixel specified by pixel coordinates
 void SoftwareRendererImp::fill_pixel(int x, int y, const Color &color) {
 
-  printf("Filing a pixelll");
 
 	// Task 2: Re-implement this function
 
