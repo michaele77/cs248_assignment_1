@@ -263,6 +263,8 @@ void SoftwareRendererImp::set_sample_rate( size_t sample_rate ) {
   supersample_render_target.resize( target_h*target_w*4*sample_rate*sample_rate );
   supersample_width = this->target_w*sample_rate;
   supersample_height = this->target_h*sample_rate;
+  // issue: fill everything with 255
+  std::fill(supersample_render_target.begin(), supersample_render_target.end(), 255);
 
   printf("Sample rate ois %d\n", (int)sample_rate);
 
@@ -541,12 +543,12 @@ void SoftwareRendererImp::rasterize_triangle( float x0, float y0,
 
   printf("sample rate = %d", sample_rate);
 
-  float ss_x0 = x0*sample_rate;
-  float ss_y0 = y0*sample_rate;
-  float ss_x1 = x1*sample_rate;
-  float ss_y1 = y1*sample_rate;
-  float ss_x2 = x2*sample_rate;
-  float ss_y2 = y2*sample_rate;
+  int ss_x0 = x0*sample_rate;
+  int ss_y0 = y0*sample_rate;
+  int ss_x1 = x1*sample_rate;
+  int ss_y1 = y1*sample_rate;
+  int ss_x2 = x2*sample_rate;
+  int ss_y2 = y2*sample_rate;
 
   // 1) check bounds
   // Point 0
@@ -577,18 +579,18 @@ void SoftwareRendererImp::rasterize_triangle( float x0, float y0,
   // 3) Go through all sample points
   // Iterate in row-dominant form
   // First, set up all of the 'inside line' based dot product equations
-  float sample_x, sample_y;
+  int sample_x, sample_y;
   float L_i[3];
   bool in_triangle;
 
   // CHECK! If there's an error with task 1 output, check the triangle windings thing... might be the reason
-  float A[3] = {ss_y1 - ss_y0, 
+  int A[3] = {ss_y1 - ss_y0, 
               ss_y2 - ss_y1,
               ss_y0 - ss_y2}; // windings line
-  float B[3] = {ss_x1 - ss_x0,
+  int B[3] = {ss_x1 - ss_x0,
               ss_x2 - ss_x1,
               ss_x0 - ss_x2}; // windings line
-  float C[3] = {ss_y0*B[0] - ss_x0*A[0],
+  int C[3] = {ss_y0*B[0] - ss_x0*A[0],
               ss_y1*B[1] - ss_x1*A[1],
               ss_y2*B[2] - ss_x2*A[2]};
 
@@ -662,8 +664,8 @@ void SoftwareRendererImp::rasterize_triangle( float x0, float y0,
   for (int count_row = row_iter_Lo_bound; count_row < row_iter_Hi_bound; count_row++) {
     for (int count_col = col_iter_Lo_bound; count_col < col_iter_Hi_bound; count_col++) {
 
-      sample_x = count_col + 0.5;
-      sample_y = count_row + 0.5;
+      sample_x = (float)(count_col + 0.5);
+      sample_y = (float)(count_row + 0.5);
 
 
       for(int ixx = 0; ixx < 3; ixx++) {
@@ -785,9 +787,9 @@ void SoftwareRendererImp::resolve( void ) {
 
 
   // // CHECK! Come back and change filter and supersample types to be unsigned char to optimize
-  // std::vector<unsigned char> filter_mask;
-  // printf("width is %d\n", (int)supersample_width);
-  // filter_mask.resize( 4*sample_rate*(supersample_width + 1) ); // simplified from sample_rate*supersample_width + sample_rate*4
+  std::vector<float> blur_buffer;
+  blur_buffer.resize(4*target_h*target_w);
+  
 
   // // std::fill(filter_mask.begin(), filter_mask.end(), 0);
   // // filter_mask = {0}; // Initialize all elemenets to 0
@@ -839,32 +841,26 @@ void SoftwareRendererImp::resolve( void ) {
 
       // Note! Need to divide out the sample_rate dividsion here, otherwise unsigned char will overflow!
       // issue: we're somehow supposed to do a blur in supersample_render_target?
-      render_target[indx_target] += round(supersample_render_target[indx_supsamp_target] / sample_rate_sq);
-      render_target[indx_target+1] += round(supersample_render_target[indx_supsamp_target+1] / sample_rate_sq);
-      render_target[indx_target+2] += round(supersample_render_target[indx_supsamp_target+2] / sample_rate_sq);
-      render_target[indx_target+3] += round(supersample_render_target[indx_supsamp_target+3] / sample_rate_sq);
+      // render_target[indx_target] += round(supersample_render_target[indx_supsamp_target] / sample_rate_sq);
+      // render_target[indx_target+1] += round(supersample_render_target[indx_supsamp_target+1] / sample_rate_sq);
+      // render_target[indx_target+2] += round(supersample_render_target[indx_supsamp_target+2] / sample_rate_sq);
+      // render_target[indx_target+3] += round(supersample_render_target[indx_supsamp_target+3] / sample_rate_sq);
 
-
-
-
-      // indx_target = 4*(i*target_w + j);
-      // indx_supsamp_target = 4*sample_rate*(i*supersample_width + j);
-
-    
-      // render_target[indx_target] = std::inner_product(supersample_render_target.begin()+indx_supsamp_target, supersample_render_target.begin()+indx_supsamp_target+filter_len, filter_mask.begin(), 0) / sample_rate_sq;
-      // render_target[indx_target+1] = std::inner_product(supersample_render_target.begin()+indx_supsamp_target+1, supersample_render_target.begin()+indx_supsamp_target+1+filter_len, filter_mask.begin(), 0) / sample_rate_sq;
-      // render_target[indx_target+2] = std::inner_product(supersample_render_target.begin()+indx_supsamp_target+2, supersample_render_target.begin()+indx_supsamp_target+2+filter_len, filter_mask.begin(), 0) / sample_rate_sq;
-      // render_target[indx_target+3] = std::inner_product(supersample_render_target.begin()+indx_supsamp_target+3, supersample_render_target.begin()+indx_supsamp_target+3+filter_len, filter_mask.begin(), 0) / sample_rate_sq;
-
-
-      
+      blur_buffer[indx_target] += (float)supersample_render_target[indx_supsamp_target] / sample_rate_sq;
+      blur_buffer[indx_target+1] += (float)supersample_render_target[indx_supsamp_target+1] / sample_rate_sq;
+      blur_buffer[indx_target+2] += (float)supersample_render_target[indx_supsamp_target+2] / sample_rate_sq;
+      blur_buffer[indx_target+3] += (float)supersample_render_target[indx_supsamp_target+3] / sample_rate_sq;
 
     }
   }
 
+  for (int i = 0; i < render_target_length; i++) {
+    render_target[i] = round(blur_buffer[i]);
+  }
+
   // CHECK!
   // issue: fill everything with 255
-  std::fill(supersample_render_target.begin(), supersample_render_target.end(), 0); // Fill super_render_target with 0s so we can reset it!
+  std::fill(supersample_render_target.begin(), supersample_render_target.end(), 255); // Fill super_render_target with 0s so we can reset it!
 
     
   return;
