@@ -18,15 +18,30 @@ void ViewportImp::set_viewbox( float x, float y, float span ) {
 
   // Translation matrix: identity matrix + bx @ [0][2] + by @ [1][2]
   Matrix3x3 transmat_translation = Matrix3x3::identity(); // Get identity matrix
-  transmat_translation[0][2] = -1*(x - span)/span; // right shift by x - span
-  transmat_translation[1][2] = 1*(y - span)/span; // downshift by y - span
+  transmat_translation[0][2] = -1*(x - span); // right shift by x - span
+  transmat_translation[1][2] = -1*(y - span); // downshift by y - span
 
   // Scale matrix: identity matrix + sx @ [0][0] + sy @ [1][1]
   Matrix3x3 transmat_scale = Matrix3x3::identity(); // Get identity matrix
-  transmat_scale[0][0] = 2*span; // scale by 2*span in x
-  transmat_scale[1][1] = 2*span; // scale by 2*span in y
+  // transmat_scale[0][0] = 2*span; // scale by 2*span in x
+  // transmat_scale[1][1] = 2*span; // scale by 2*span in y
+  transmat_scale[0][0] = 1/(2*span);
+  transmat_scale[1][1] = 1/(2*span);
+  // transmat_scale[0][2] /= (2*span);
+  // transmat_scale[1][2] /= (2*span);
 
-  Matrix3x3 transmat = transmat_reflection * transmat_translation * transmat_scale;
+  // Matrix3x3 transmat = transmat_reflection * transmat_translation * transmat_scale;
+  // Matrix3x3 transmat = transmat_translation*transmat_scale;
+
+  Matrix3x3 transmat = Matrix3x3::identity();
+  transmat[0][2] = -1*(x - span); 
+  transmat[1][2] = -1*(y - span);
+
+
+  transmat[0][0] = 1/(2*span);
+  transmat[1][1] = 1/(2*span);
+  transmat[0][2] /= 2*span;
+  transmat[1][2] /= 2*span;
 
 
   Matrix3x3 printg_mat  = this->svg_2_norm;
@@ -63,10 +78,10 @@ void ViewportImp::set_viewbox( float x, float y, float span ) {
   printf("~~~~~~~~~~~~~");
 
   
-  this->svg_2_norm = transmat_reflection;
-  this->svg_2_norm = transmat_scale*this->svg_2_norm;
-  this->svg_2_norm = transmat_translation*this->svg_2_norm;
-  // this->svg_2_norm = transmat;
+  // this->svg_2_norm = transmat_reflection;
+  // this->svg_2_norm = transmat_scale*this->svg_2_norm;
+  // this->svg_2_norm = transmat_translation*this->svg_2_norm;
+
 
   printg_mat  = this->svg_2_norm;
   printf("Checking copy mat:\n");

@@ -83,9 +83,35 @@ Color Sampler2DImp::sample_nearest(Texture& tex,
                                    int level) {
 
   // Task 4: Implement nearest neighbour interpolation
+
+  // to return magenta in an invalid level:
+  if (level > tex.mipmap.size() || level < 0) {
+    // return magenta for invalid level
+    return Color(1,0,1,1);
+  }
   
-  // return magenta for invalid level
-  return Color(1,0,1,1);
+
+  // CHECK! getting quite a bit of pixel offset using this
+
+  MipLevel& thismip = tex.mipmap[level];
+  int mip_width = thismip.width;
+  int mip_height = thismip.height;
+  // std::vector<unsigned char> mip_texels = thismip.texels;
+
+
+
+  // Note: the texels here are stored in the 4 pixels frame buffer structure
+  int nearest_x = round(mip_width*u - 0.5f); // offset the added 0.5 that was added in software_renderer to get correct coordinate
+  int nearest_y = round(mip_height*v - 0.5f);
+
+  Color color_to_return;
+
+  color_to_return.r = thismip.texels[4*(nearest_x + nearest_y*mip_width)] / 255.f; // cast to float
+  color_to_return.g = thismip.texels[4*(nearest_x + nearest_y*mip_width) + 1] / 255.f; // cast to float
+  color_to_return.b = thismip.texels[4*(nearest_x + nearest_y*mip_width) + 2] / 255.f; // cast to float
+  color_to_return.a = thismip.texels[4*(nearest_x + nearest_y*mip_width) + 3] / 255.f; // cast to float
+
+  return color_to_return;
 
 }
 
@@ -95,8 +121,82 @@ Color Sampler2DImp::sample_bilinear(Texture& tex,
   
   // Task 4: Implement bilinear filtering
 
-  // return magenta for invalid level
-  return Color(1,0,1,1);
+  // to return magenta in an invalid level:
+  if (level > tex.mipmap.size() || level < 0) {
+    // return magenta for invalid level
+    return Color(1,0,1,1);
+  }
+
+  MipLevel& thismip = tex.mipmap[level];
+  int mip_width = thismip.width;
+  int mip_height = thismip.height;
+  // std::vector<unsigned char> mip_texels = thismip.texels;
+  float pixel_u = mip_width*u;
+  float pixel_v = mip_height*v;
+
+
+  // Note: the texels here are stored in the 4 pixels frame buffer structure
+
+  int bounds_u0 = floor(pixel_u - 0.5f);
+  int bounds_u1 = ceil(pixel_u - 0.5f);
+  int bounds_v0 = floor(pixel_v - 0.5f);
+  int bounds_v1 = ceil(pixel_v - 0.5f);
+
+  // Bilinear takes 3 interpolations:
+  // Get colors for first 2 based on outter bounds
+
+
+  // Lower horizontal line
+  Color lh_0, lh_1, lh_comb;
+
+  int base_indx = 4*(bounds_u0 + bounds_v0*mip_width);
+  lh_0.r = thismip.texels[base_indx] / 255.f; // cast to float
+  lh_0.g = thismip.texels[base_indx + 1] / 255.f; // cast to float
+  lh_0.b = thismip.texels[base_indx + 2] / 255.f; // cast to float
+  lh_0.a = thismip.texels[base_indx + 3] / 255.f; // cast to float
+
+  base_indx = 4*(bounds_u1 + bounds_v0*mip_width);
+  lh_1.r = thismip.texels[base_indx] / 255.f; // cast to float
+  lh_1.g = thismip.texels[base_indx + 1] / 255.f; // cast to float
+  lh_1.b = thismip.texels[base_indx + 2] / 255.f; // cast to float
+  lh_1.a = thismip.texels[base_indx + 3] / 255.f; // cast to float
+
+  lh_comb.r = lh_0.r + ( pixel_u-bounds_u0 / ((float)bounds_u1 - bounds_u0) ) * (lh_1.r - lh_0.r);
+  lh_comb.g = lh_0.g + ( pixel_u-bounds_u0 / ((float)bounds_u1 - bounds_u0) ) * (lh_1.g - lh_0.g);
+  lh_comb.b = lh_0.b + ( pixel_u-bounds_u0 / ((float)bounds_u1 - bounds_u0) ) * (lh_1.b - lh_0.b);
+  lh_comb.a = lh_0.a + ( pixel_u-bounds_u0 / ((float)bounds_u1 - bounds_u0) ) * (lh_1.a - lh_0.a);
+
+
+  // upper horizontal line
+  Color uh_0, uh_1, uh_comb;
+
+  base_indx = 4*(bounds_u0 + bounds_v1*mip_width);
+  uh_0.r = thismip.texels[base_indx] / 255.f; // cast to float
+  uh_0.g = thismip.texels[base_indx + 1] / 255.f; // cast to float
+  uh_0.b = thismip.texels[base_indx + 2] / 255.f; // cast to float
+  uh_0.a = thismip.texels[base_indx + 3] / 255.f; // cast to float
+  
+  base_indx = 4*(bounds_u1 + bounds_v1*mip_width);
+  uh_1.r = thismip.texels[base_indx] / 255.f; // cast to float
+  uh_1.g = thismip.texels[base_indx + 1] / 255.f; // cast to float
+  uh_1.b = thismip.texels[base_indx + 2] / 255.f; // cast to float
+  uh_1.a = thismip.texels[base_indx + 3] / 255.f; // cast to float
+
+  uh_comb.r = uh_0.r + ( pixel_u-bounds_u0 / ((float)bounds_u1 - bounds_u0) ) * (uh_1.r - uh_0.r);
+  uh_comb.g = uh_0.g + ( pixel_u-bounds_u0 / ((float)bounds_u1 - bounds_u0) ) * (uh_1.g - uh_0.g);
+  uh_comb.b = uh_0.b + ( pixel_u-bounds_u0 / ((float)bounds_u1 - bounds_u0) ) * (uh_1.b - uh_0.b);
+  uh_comb.a = uh_0.a + ( pixel_u-bounds_u0 / ((float)bounds_u1 - bounds_u0) ) * (uh_1.a - uh_0.a);
+
+  // Combination interpolation (along y axis between 2 horizontal interps)
+  Color color_to_return;
+
+  color_to_return.r = lh_comb.r + ( pixel_v-bounds_v0 / ((float)bounds_v1 - bounds_v0) ) * (uh_comb.r - lh_comb.r);
+  color_to_return.g = lh_comb.g + ( pixel_v-bounds_v0 / ((float)bounds_v1 - bounds_v0) ) * (uh_comb.g - lh_comb.g);
+  color_to_return.b = lh_comb.b + ( pixel_v-bounds_v0 / ((float)bounds_v1 - bounds_v0) ) * (uh_comb.b - lh_comb.b);
+  color_to_return.a = lh_comb.a + ( pixel_v-bounds_v0 / ((float)bounds_v1 - bounds_v0) ) * (uh_comb.a - lh_comb.a);
+
+
+  return color_to_return;
 
 }
 

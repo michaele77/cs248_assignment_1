@@ -618,29 +618,38 @@ void SoftwareRendererImp::rasterize_image( float x0, float y0,
   //    -For each coord, get the appropriate color using texture map and some form of sampler
   //      -Use sampler_nearest() first, then go to bilinear
 
-  // float sx0 = sample_rate*x0;
-  // float xy0 = sample_rate*y0;
-  // float sx1 = sample_rate*x1;
-  // float xy1 = sample_rate*y1;
+  float sx0 = sample_rate*x0 + 0.5;
+  float sy0 = sample_rate*y0 + 0.5;
+  float sx1 = sample_rate*x1 + 0.5;
+  float sy1 = sample_rate*y1 + 0.5;
 
-  // // The pixels are technically float, but we're gonna be filling our frame buffer, so conver to int:
-  // int lobound_x = (int)round(sx0);
-  // int hibound_x = (int)round(sx1);
-  // int lobound_y = (int)round(sy0);
-  // int hibound_y = (int)round(sy1);
+  // The pixels are technically float, but we're gonna be filling our frame buffer, so conver to int:
+  // CHECK! If getting small border pixel differences, this is the reason
+  // float lobound_x = (int)ceil(sx0);
+  // int hibound_x = (int)floor(sx1);
+  // int lobound_y = (int)ceil(sy0);
+  // int hibound_y = (int)floor(sy1);
 
-  // Color temp_color;
+  Color temp_color;
 
-  // // CHECK! should this for loop be <= or just <>?
-  // for (int cur_row = lobound_y; cur_row <= hibound_y; cur_row ++) {
-  //   for (int cur_col = lobound_x; cur_col <= hibound_x; cur_col ++) {
-  //     temp_color = sample_nearest(tex, (float)cur_row, (float)cur_col, ???); // What is the input u and v here??
+  // No need to create a sampler object, use object called "sampler"
+  float curr_u = 0;
+  float curr_v = 0;
 
-  //     // Once we have the color, write to our supersample frame buffer
-  //     fill_sample(curr_col, curr_row, temp_color);
+  // CHECK! should this for loop be <= or just <>?
+  for (float cur_y = sy0; cur_y <= sy1; cur_y ++) {
+    for (float cur_x = sx0; cur_x <= sx1; cur_x ++) {
+
+      curr_u = (sx1 - cur_x) / (sx1 - sx0);
+      curr_v = (sy1 - cur_y) / (sy1 - sy0);
+
+      temp_color = sampler->sample_nearest(tex, curr_u, curr_v, 0);
+
+      // Once we have the color, write to our supersample frame buffer
+      fill_sample((int)floor(cur_x), (int)floor(cur_y), temp_color);
       
-  //   }
-  // }
+    }
+  }
 
 }
 
