@@ -39,6 +39,11 @@ void SoftwareRendererImp::fill_sample(int sx, int sy, const Color &color) {
 
   // Next, apply appropriate transform to give the sample alpha
   // CHECK! Is this correct? is this alpha blending needed? alpha_blending_helper doesnt seem to be implemented...
+
+  if (sx < 0 || sx >= supersample_width) return;
+  if (sy < 0 || sy >= supersample_height) return;
+
+  
   Color pixel_color;
 	float inv255 = 1.0 / 255.0;
 
@@ -457,19 +462,6 @@ void SoftwareRendererImp::rasterize_triangle( float x0, float y0,
   int ss_x2 = x2*sample_rate;
   int ss_y2 = y2*sample_rate;
 
-  // 1) check bounds
-  // Point 0
-  if (ss_x0 < 0 || ss_x0 >= supersample_width) return;
-  if (ss_y0 < 0 || ss_y0 >= supersample_height) return;
-
-  // Point 1
-  if (ss_x1 < 0 || ss_x1 >= supersample_width) return;
-  if (ss_y1 < 0 || ss_y1 >= supersample_height) return;
-
-  // Point 2
-  if (ss_x2 < 0 || ss_x2 >= supersample_width) return;
-  if (ss_y2 < 0 || ss_y2 >= supersample_height) return;
-
 
 
   // 2)
@@ -501,56 +493,6 @@ void SoftwareRendererImp::rasterize_triangle( float x0, float y0,
               ss_y1*B[1] - ss_x1*A[1],
               ss_y2*B[2] - ss_x2*A[2]};
 
-
-
-  // // Attempting fast incremental update
-  // // Instead of calculating all L_i every loop, we just calculate the first one and add whatever we need 
-  // // CHECK! Attempted to make it faster...not sure if it is with all the extra assigns and stuffsample_rate
-  // float prev_L_i[3];
-  // float og_sample_x = col_iter_Lo_bound + 0.5;
-  // float og_sample_y = row_iter_Lo_bound + 0.5;
-  // int delta_iters = 0;
-  // prev_L_i[0] = A[0]*og_sample_x - B[0]*og_sample_y + C[0];
-  // prev_L_i[1] = A[1]*og_sample_x - B[1]*og_sample_y + C[1];
-  // prev_L_i[2] = A[2]*og_sample_x - B[2]*og_sample_y + C[2];
-
-  // float bound_to_check = 0.01;
-
-
-  // for (int count_row = row_iter_Lo_bound; count_row < row_iter_Hi_bound; count_row++) {
-  //   for (int count_col = col_iter_Lo_bound; count_col < col_iter_Hi_bound; count_col++) {
-
-  //     sample_x = count_col + 0.5;
-  //     sample_y = count_row + 0.5;
-
-  //     if ((count_col == col_iter_Lo_bound+1) && (count_row == row_iter_Lo_bound+1)) {
-  //       printf("sample_x = %f", sample_x);
-  //       printf("count_col = %d", count_col);
-  //     }
-
-  //     in_triangle = (prev_L_i[0] <= bound_to_check) && (prev_L_i[1] <= bound_to_check) && (prev_L_i[2] <= bound_to_check);
-
-  //     if ( in_triangle ) {
-  //       fill_sample(count_col, count_row, color); // If we made it here, we're in the triangle, so Color it!
-  //     }
-
-  //     prev_L_i[0] += A[0];
-  //     prev_L_i[1] += A[1];
-  //     prev_L_i[2] += A[2];
-
-  //   }
-
-  //   prev_L_i[0] -= B[0];
-  //   prev_L_i[1] -= B[1];
-  //   prev_L_i[2] -= B[2];
-
-  //   delta_iters = (col_iter_Hi_bound - col_iter_Lo_bound);
-
-  //   prev_L_i[0] -= delta_iters*A[0];
-  //   prev_L_i[1] -= delta_iters*A[1];
-  //   prev_L_i[2] -= delta_iters*A[2];
-
-  // }
 
 
   // Before we iterate points, need to check if the triangle is clockwise or CCW!
