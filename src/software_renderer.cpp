@@ -446,6 +446,7 @@ void SoftwareRendererImp::rasterize_triangle( float x0, float y0,
                                               float x1, float y1,
                                               float x2, float y2,
                                               Color color ) {
+
   // Task 1: 
   // Implement triangle rasterization (you may want to call fill_sample here)
 
@@ -455,43 +456,42 @@ void SoftwareRendererImp::rasterize_triangle( float x0, float y0,
   //    3) Iterate through points and check that the triple bounding condition is met
   //      --> If met, call fill_sample
 
-  printf("sample rate = %d", sample_rate);
 
-  int ss_x0 = x0*sample_rate;
-  int ss_y0 = y0*sample_rate;
-  int ss_x1 = x1*sample_rate;
-  int ss_y1 = y1*sample_rate;
-  int ss_x2 = x2*sample_rate;
-  int ss_y2 = y2*sample_rate;
+  float ss_x0 = x0;
+  float ss_y0 = y0;
+  float ss_x1 = x1;
+  float ss_y1 = y1;
+  float ss_x2 = x2;
+  float ss_y2 = y2;
 
 
 
   // 2)
   // Get minimum X and Y coords from P0,P1,P2
-  int row_iter_Lo_bound = std::min({ ss_y0, ss_y1, ss_y2 });
-  int col_iter_Lo_bound = std::min({ ss_x0, ss_x1, ss_x2 });
+  int row_iter_Lo_bound = floor(std::min({ ss_y0, ss_y1, ss_y2 }));
+  int col_iter_Lo_bound = floor(std::min({ ss_x0, ss_x1, ss_x2 }));
 
   // Get maximum X and Y coords from P0,P1,P2
-  int row_iter_Hi_bound = std::max({ ss_y0, ss_y1, ss_y2 });
-  int col_iter_Hi_bound = std::max({ ss_x0, ss_x1, ss_x2 });
+  int row_iter_Hi_bound = ceil(std::max({ ss_y0, ss_y1, ss_y2 }));
+  int col_iter_Hi_bound = ceil(std::max({ ss_x0, ss_x1, ss_x2 }));
 
 
 
   // 3) Go through all sample points
   // Iterate in row-dominant form
   // First, set up all of the 'inside line' based dot product equations
-  int sample_x, sample_y;
+  float sample_x, sample_y, supersampled_x, supersampled_y;
   float L_i[3];
   bool in_triangle;
 
   // CHECK! If there's an error with task 1 output, check the triangle windings thing... might be the reason
-  int A[3] = {ss_y1 - ss_y0, 
+  float A[3] = {ss_y1 - ss_y0, 
               ss_y2 - ss_y1,
               ss_y0 - ss_y2}; // windings line
-  int B[3] = {ss_x1 - ss_x0,
+  float B[3] = {ss_x1 - ss_x0,
               ss_x2 - ss_x1,
               ss_x0 - ss_x2}; // windings line
-  int C[3] = {ss_y0*B[0] - ss_x0*A[0],
+  float C[3] = {ss_y0*B[0] - ss_x0*A[0],
               ss_y1*B[1] - ss_x1*A[1],
               ss_y2*B[2] - ss_x2*A[2]};
 
@@ -508,6 +508,9 @@ void SoftwareRendererImp::rasterize_triangle( float x0, float y0,
     is_CCW_flag = false;
   }
 
+  // float base_divider = pow(2.0, (double)sample_rate); // Divide our numbers by 2^sample_rate
+  float base_divider = 2*sample_rate; // Divide our numbers by 2*sample_rate
+  float base_multiplier = 1/base_divider;
 
 
 
@@ -515,32 +518,41 @@ void SoftwareRendererImp::rasterize_triangle( float x0, float y0,
   for (int count_row = row_iter_Lo_bound; count_row < row_iter_Hi_bound; count_row++) {
     for (int count_col = col_iter_Lo_bound; count_col < col_iter_Hi_bound; count_col++) {
 
-      sample_x = (float)(count_col + 0.5);
-      sample_y = (float)(count_row + 0.5);
+
+      for (int suppix_x = 1; suppix_x < base_divider; suppix_x += 2) {
+        for (int suppix_y = 1; suppix_y < base_divider; suppix_y += 2) {
+          // sample rate = 1 --> 1/2
+          // sample rate = 2 --> 1/4, 3/4
+          // sample rate = 3 --> 1/6, 3/6, 5/6
+          sample_x = count_col + suppix_x * base_multiplier;
+          sample_y = count_row + suppix_y * base_multiplier;
+
+          supersampled_x = sample_rate * (sample_x - base_multiplier);
+          supersampled_y = sample_rate * (sample_y - base_multiplier);
+
+          for(int ixx = 0; ixx < 3; ixx++) {
+            L_i[ixx] =  A[ixx]*sample_x - B[ixx]*sample_y + C[ixx];
+          }
+
+          if (is_CCW_flag) {
+            in_triangle = (L_i[0] <= 0) && (L_i[1] <= 0) && (L_i[2] <= 0);
+          } else {
+            in_triangle = (L_i[0] >= 0) && (L_i[1] >= 0) && (L_i[2] >= 0);
+          }
+          // in_triangle = (L_i[0] > 0) && (L_i[1] > 0) && (L_i[2] > 0);
+          // in_triangle = (L_i[0] <= 0) && (L_i[1] <= 0) && (L_i[2] <= 0);
+
+          if ( in_triangle ) {
+            fill_sample((int)round(supersampled_x), (int)round(supersampled_y), color); // If we made it here, we're in the triangle, so Color it!
+          }
 
 
-      for(int ixx = 0; ixx < 3; ixx++) {
-        L_i[ixx] =  A[ixx]*sample_x - B[ixx]*sample_y + C[ixx];
-      }
-
-      if (is_CCW_flag) {
-        in_triangle = (L_i[0] <= 0) && (L_i[1] <= 0) && (L_i[2] <= 0);
-      } else {
-        in_triangle = (L_i[0] >= 0) && (L_i[1] >= 0) && (L_i[2] >= 0);
-      }
-      // in_triangle = (L_i[0] > 0) && (L_i[1] > 0) && (L_i[2] > 0);
-      // in_triangle = (L_i[0] <= 0) && (L_i[1] <= 0) && (L_i[2] <= 0);
-
-      if ( in_triangle ) {
-        fill_sample(count_col, count_row, color); // If we made it here, we're in the triangle, so Color it!
+        }
       }
 
     }
 
   }
-
-
-
 
 }
 
