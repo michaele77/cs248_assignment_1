@@ -47,18 +47,19 @@ void SoftwareRendererImp::fill_sample(int sx, int sy, const Color &color) {
   Color pixel_color;
 	float inv255 = 1.0 / 255.0;
 
-  // pixel_color.r = supersample_render_target[4 * (sx + sy * supersample_width)] * inv255;
-	// pixel_color.g = supersample_render_target[4 * (sx + sy * supersample_width) + 1] * inv255;
-	// pixel_color.b = supersample_render_target[4 * (sx + sy * supersample_width) + 2] * inv255;
-	// pixel_color.a = supersample_render_target[4 * (sx + sy * supersample_width) + 3] * inv255;
+  pixel_color.r = supersample_render_target[4 * (sx + sy * supersample_width)] * inv255;
+	pixel_color.g = supersample_render_target[4 * (sx + sy * supersample_width) + 1] * inv255;
+	pixel_color.b = supersample_render_target[4 * (sx + sy * supersample_width) + 2] * inv255;
+	pixel_color.a = supersample_render_target[4 * (sx + sy * supersample_width) + 3] * inv255;
 
-  pixel_color.r = (float) color.r;
-  pixel_color.g = (float) color.g;
-  pixel_color.b = (float) color.b;
-  pixel_color.a = (float) color.a; 
+  // pixel_color.r = (float) color.r;
+  // pixel_color.g = (float) color.g;
+  // pixel_color.b = (float) color.b;
+  // pixel_color.a = (float) color.a; 
 
   // CHECK! Technically, we dont need to do alpha blending for fill_sample i think --> performance boost
-	pixel_color = ref->alpha_blending_helper(pixel_color, color);
+  pixel_color = alpha_blending(pixel_color, color);
+	// pixel_color = ref->alpha_blending_helper(pixel_color, color);
 
   supersample_render_target[4 * (sx + sy * supersample_width)] = (uint8_t)(pixel_color.r * 255);
 	supersample_render_target[4 * (sx + sy * supersample_width) + 1] = (uint8_t)(pixel_color.g * 255);
@@ -115,7 +116,8 @@ void SoftwareRendererImp::fill_pixel(int x, int y, const Color &color) {
 
 
 
-  pixel_color = ref->alpha_blending_helper(pixel_color, color);
+  pixel_color = alpha_blending(pixel_color, color);
+  // pixel_color = ref->alpha_blending_helper(pixel_color, color);
 
 
   for (int i = 0; i < sample_rate; i++) {
@@ -417,10 +419,10 @@ void SoftwareRendererImp::rasterize_point( float x, float y, Color color ) {
   // render_target[4 * (sx + sy * target_w) + 2] = (uint8_t)(color.b * 255);
   // render_target[4 * (sx + sy * target_w) + 3] = (uint8_t)(color.a * 255);
 
-  supersample_render_target[4 * (sx + sy * supersample_width)] = (uint8_t)(color.r * 255);
-  supersample_render_target[4 * (sx + sy * supersample_width) + 1] = (uint8_t)(color.g * 255);
-  supersample_render_target[4 * (sx + sy * supersample_width) + 2] = (uint8_t)(color.b * 255);
-  supersample_render_target[4 * (sx + sy * supersample_width) + 3] = (uint8_t)(color.a * 255);
+  // supersample_render_target[4 * (sx + sy * supersample_width)] = (uint8_t)(color.r * 255);
+  // supersample_render_target[4 * (sx + sy * supersample_width) + 1] = (uint8_t)(color.g * 255);
+  // supersample_render_target[4 * (sx + sy * supersample_width) + 2] = (uint8_t)(color.b * 255);
+  // supersample_render_target[4 * (sx + sy * supersample_width) + 3] = (uint8_t)(color.a * 255);
 
 
   // Alpha blending function
@@ -731,6 +733,46 @@ Color SoftwareRendererImp::alpha_blending(Color pixel_color, Color color)
 {
   // Task 5
   // Implement alpha compositing
+
+  // As per SVG spec, this is the alpha convesion algorithm
+  // This assumes all colors use pre-multiplied alphas
+  // Ca' = 1 - (1 - Ea) * (1 - Ca)
+  // Cr' = (1 - Ea) * Cr + Er
+  // Cg' = (1 - Ea) * Cg + Eg
+  // Cb' = (1 - Ea) * Cb + Eb
+
+  // Note: pixel_color already has color values assigned to it by code, dont make assumptions of that though
+  float eps_small = 0.00000001; // Add this to avoid divide by 0 issues
+
+ 
+
+  // pixel_color is the background canvas color
+  float Cr = pixel_color.r * pixel_color.a;
+  float Cg = pixel_color.g * pixel_color.a;
+  float Cb = pixel_color.b * pixel_color.a;
+  float Ca = pixel_color.a;
+
+  // float Cr = pixel_color.r;
+  // float Cg = pixel_color.g;
+  // float Cb = pixel_color.b;
+  // float Ca = pixel_color.a;
+
+  // color is the desired color
+  float Er = color.r * color.a;
+  float Eg = color.g * color.a;
+  float Eb = color.b * color.a;
+  float Ea = color.a;
+
+  pixel_color.a = 1 - (1 - Ea)*(1 - Ca);
+  pixel_color.r = (1 - Ea) * Cr + Er;
+  pixel_color.g = (1 - Ea) * Cg + Eg;
+  pixel_color.b = (1 - Ea) * Cb + Eb;
+
+  // Divide back out alpha premultiplication
+  pixel_color.r /= (pixel_color.a + eps_small);
+  pixel_color.g /= (pixel_color.a + eps_small);
+  pixel_color.b /= (pixel_color.a + eps_small);
+
   return pixel_color;
 }
 
