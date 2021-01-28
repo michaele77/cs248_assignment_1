@@ -521,13 +521,6 @@ void SoftwareRendererImp::rasterize_triangle( float x0, float y0,
 
       for(int ixx = 0; ixx < 3; ixx++) {
         L_i[ixx] =  A[ixx]*sample_x - B[ixx]*sample_y + C[ixx];
-        // if (L_i[ixx] == 0) {
-        //   // We have encountered a literal edge case!
-        //   // Let's consistently count it as 'inside'
-        //   L_i[ixx] = -1;
-        //   cout << "This happened";
-        //   // CHECK! Is this how we're supposed to handle the literal 'edge cases'??
-        // }
       }
 
       if (is_CCW_flag) {
@@ -769,6 +762,7 @@ Color SoftwareRendererImp::alpha_blending(Color pixel_color, Color color)
   pixel_color.b = (1 - Ea) * Cb + Eb;
 
   // Divide back out alpha premultiplication
+  // Add an epsilon to avoid divide by 0 errors
   pixel_color.r /= (pixel_color.a + eps_small);
   pixel_color.g /= (pixel_color.a + eps_small);
   pixel_color.b /= (pixel_color.a + eps_small);
