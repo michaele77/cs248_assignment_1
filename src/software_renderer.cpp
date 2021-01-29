@@ -581,20 +581,64 @@ void SoftwareRendererImp::rasterize_image( float x0, float y0,
   float x_diff = 1 / (sx1 - sx0);
   float y_diff = 1 / (sy1 - sy0);
 
-  for (float cur_y = sy0; cur_y <= sy1; cur_y ++) {
-    for (float cur_x = sx0; cur_x <= sx1; cur_x ++) {
+  for (float cur_y = sy0; cur_y < sy1; cur_y ++) {
+    for (float cur_x = sx0; cur_x < sx1; cur_x ++) {
 
-      curr_u = (cur_x - sx0) * x_diff;
-      curr_v = (cur_y - sy0) * y_diff;
+      curr_u = (cur_x - sx0 + 0.5) * x_diff;
+      curr_v = (cur_y - sy0 + 0.5) * y_diff;
 
       temp_color = sampler->sample_bilinear(tex, curr_u, curr_v, 0);
       // temp_color = sampler->sample_nearest(tex, curr_u, curr_v, 0);
 
       // Once we have the color, write to our supersample frame buffer
+      // issue: Got the closest besides this by using round at fill_sample and adding +0.5 INSIDE curr_u/v assignment
       fill_sample((int)floor(cur_x), (int)floor(cur_y), temp_color);
       
     }
   }
+
+  // // CLAMP TO EDGE
+  // // Do top and bottom horizontal edges
+  // for (int x_edges = sx0; x_edges <= sx1; x_edges ++) {
+  //   // Top edge
+  //   int other_val = 4*(x_edges + (sy0+1) * supersample_width);
+  //   temp_color.r = supersample_render_target[other_val];
+  //   temp_color.g = supersample_render_target[other_val + 1];
+  //   temp_color.b = supersample_render_target[other_val + 2];
+  //   temp_color.a = supersample_render_target[other_val + 3];
+  //   fill_sample((int)floor(x_edges), (int)floor(sy0), temp_color);
+
+  //   // bottom edge
+  //   other_val = 4*(x_edges + (sy1-1) * supersample_width);
+  //   temp_color.r = supersample_render_target[other_val];
+  //   temp_color.g = supersample_render_target[other_val + 1];
+  //   temp_color.b = supersample_render_target[other_val + 2];
+  //   temp_color.a = supersample_render_target[other_val + 3];
+  //   fill_sample((int)floor(x_edges), (int)floor(sy1), temp_color);
+
+  // }
+
+  // // Do left and right vertical edges
+  // for (int y_edges = sy0; y_edges <= sy1; y_edges ++) {
+  //   // left edge
+  //   int other_val = 4*(sx0 + 1 + y_edges * supersample_width);
+  //   temp_color.r = supersample_render_target[other_val];
+  //   temp_color.g = supersample_render_target[other_val + 1];
+  //   temp_color.b = supersample_render_target[other_val + 2];
+  //   temp_color.a = supersample_render_target[other_val + 3];
+  //   fill_sample((int)floor(sx0), (int)floor(y_edges), temp_color);
+
+  //   // right edge
+  //   other_val = 4*(sx1 - 1 + y_edges * supersample_width);
+  //   temp_color.r = supersample_render_target[other_val];
+  //   temp_color.g = supersample_render_target[other_val + 1];
+  //   temp_color.b = supersample_render_target[other_val + 2];
+  //   temp_color.a = supersample_render_target[other_val + 3];
+  //   fill_sample((int)floor(sx1), (int)floor(y_edges), temp_color);
+  // }
+
+
+
 
 }
 

@@ -148,6 +148,21 @@ Color Sampler2DImp::sample_bilinear(Texture& tex,
   int bounds_v0 = floor(pixel_v);
   int bounds_v1 = bounds_v0 + 1;
 
+  // CLAMPING IMPLEMENTATION:
+  // if any of the bounds are outside of the render square, set them to the bound value
+  if (bounds_u0 < 0) {
+    bounds_u0 = 0;
+  }
+  if (bounds_v0 < 0) {
+    bounds_v0 = 0;
+  }
+  if (bounds_u1 > mip_width) {
+    bounds_u1 = mip_width;
+  }
+  if (bounds_v1 > mip_height) {
+    bounds_v1 = mip_height;
+  }
+
   // Bilinear takes 3 interpolations:
   // Get colors for first 2 based on outter bounds
 
