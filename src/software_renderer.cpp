@@ -484,7 +484,6 @@ void SoftwareRendererImp::rasterize_triangle( float x0, float y0,
   float L_i[3];
   bool in_triangle;
 
-  // CHECK! If there's an error with task 1 output, check the triangle windings thing... might be the reason
   float A[3] = {ss_y1 - ss_y0, 
               ss_y2 - ss_y1,
               ss_y0 - ss_y2}; // windings line
@@ -535,9 +534,9 @@ void SoftwareRendererImp::rasterize_triangle( float x0, float y0,
           }
 
           if (is_CCW_flag) {
-            in_triangle = (L_i[0] <= 0) && (L_i[1] <= 0) && (L_i[2] <= 0);
+            in_triangle = (L_i[0] < 0) && (L_i[1] < 0) && (L_i[2] < 0);
           } else {
-            in_triangle = (L_i[0] >= 0) && (L_i[1] >= 0) && (L_i[2] >= 0);
+            in_triangle = (L_i[0] > 0) && (L_i[1] > 0) && (L_i[2] > 0);
           }
           // in_triangle = (L_i[0] > 0) && (L_i[1] > 0) && (L_i[2] > 0);
           // in_triangle = (L_i[0] <= 0) && (L_i[1] <= 0) && (L_i[2] <= 0);
@@ -559,6 +558,7 @@ void SoftwareRendererImp::rasterize_triangle( float x0, float y0,
 void SoftwareRendererImp::rasterize_image( float x0, float y0,
                                            float x1, float y1,
                                            Texture& tex ) {
+  
   // Task 4: 
   // Implement image rasterization (you may want to call fill_sample here)
 
@@ -567,17 +567,10 @@ void SoftwareRendererImp::rasterize_image( float x0, float y0,
   //    -For each coord, get the appropriate color using texture map and some form of sampler
   //      -Use sampler_nearest() first, then go to bilinear
 
-  float sx0 = sample_rate*x0 + 0.5;
-  float sy0 = sample_rate*y0 + 0.5;
-  float sx1 = sample_rate*x1 + 0.5;
-  float sy1 = sample_rate*y1 + 0.5;
-
-  // The pixels are technically float, but we're gonna be filling our frame buffer, so conver to int:
-  // CHECK! If getting small border pixel differences, this is the reason
-  // float lobound_x = (int)ceil(sx0);
-  // int hibound_x = (int)floor(sx1);
-  // int lobound_y = (int)ceil(sy0);
-  // int hibound_y = (int)floor(sy1);
+  float sx0 = sample_rate*x0;
+  float sy0 = sample_rate*y0;
+  float sx1 = sample_rate*x1;
+  float sy1 = sample_rate*y1;
 
   Color temp_color;
 
@@ -585,14 +578,17 @@ void SoftwareRendererImp::rasterize_image( float x0, float y0,
   float curr_u = 0;
   float curr_v = 0;
 
-  // CHECK! should this for loop be <= or just <>?
+  float x_diff = 1 / (sx1 - sx0);
+  float y_diff = 1 / (sy1 - sy0);
+
   for (float cur_y = sy0; cur_y <= sy1; cur_y ++) {
     for (float cur_x = sx0; cur_x <= sx1; cur_x ++) {
 
-      curr_u = (sx1 - cur_x) / (sx1 - sx0);
-      curr_v = (sy1 - cur_y) / (sy1 - sy0);
+      curr_u = (cur_x - sx0) * x_diff;
+      curr_v = (cur_y - sy0) * y_diff;
 
-      temp_color = sampler->sample_nearest(tex, curr_u, curr_v, 0);
+      temp_color = sampler->sample_bilinear(tex, curr_u, curr_v, 0);
+      // temp_color = sampler->sample_nearest(tex, curr_u, curr_v, 0);
 
       // Once we have the color, write to our supersample frame buffer
       fill_sample((int)floor(cur_x), (int)floor(cur_y), temp_color);
