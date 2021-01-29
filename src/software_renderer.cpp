@@ -567,10 +567,10 @@ void SoftwareRendererImp::rasterize_image( float x0, float y0,
   //    -For each coord, get the appropriate color using texture map and some form of sampler
   //      -Use sampler_nearest() first, then go to bilinear
 
-  float sx0 = sample_rate*x0;
-  float sy0 = sample_rate*y0;
-  float sx1 = sample_rate*x1;
-  float sy1 = sample_rate*y1;
+  // float sx0 = sample_rate*x0;
+  // float sy0 = sample_rate*y0;
+  // float sx1 = sample_rate*x1;
+  // float sy1 = sample_rate*y1;
 
   Color temp_color;
 
@@ -578,21 +578,37 @@ void SoftwareRendererImp::rasterize_image( float x0, float y0,
   float curr_u = 0;
   float curr_v = 0;
 
-  float x_diff = 1 / (sx1 - sx0);
-  float y_diff = 1 / (sy1 - sy0);
+  float x_diff = 1 / (x1 - x0);
+  float y_diff = 1 / (y1 - y0);
 
-  for (float cur_y = sy0; cur_y < sy1; cur_y ++) {
-    for (float cur_x = sx0; cur_x < sx1; cur_x ++) {
+  float supsamp_x, supsamp_y, sample_x, sample_y;
+  float base_divider = 2*sample_rate; // Divide our numbers by 2*sample_rate
+  float base_multiplier = 1/base_divider;
 
-      curr_u = (cur_x - sx0 + 0.5) * x_diff;
-      curr_v = (cur_y - sy0 + 0.5) * y_diff;
+  for (float cur_y = y0; cur_y < y1; cur_y ++) {
+    for (float cur_x = x0; cur_x < x1; cur_x ++) {
+      for (int suppix_x = 1; suppix_x < base_divider; suppix_x += 2) {
+        for (int suppix_y = 1; suppix_y < base_divider; suppix_y += 2) {
+          // sample rate = 1 --> 1/2
+          // sample rate = 2 --> 1/4, 3/4
+          // sample rate = 3 --> 1/6, 3/6, 5/6
+          sample_x = cur_x + suppix_x * base_multiplier;
+          sample_y = cur_y + suppix_y * base_multiplier;
 
-      temp_color = sampler->sample_bilinear(tex, curr_u, curr_v, 0);
-      // temp_color = sampler->sample_nearest(tex, curr_u, curr_v, 0);
+          supsamp_x = sample_rate * (sample_x - base_multiplier);
+          supsamp_y = sample_rate * (sample_y - base_multiplier);
 
-      // Once we have the color, write to our supersample frame buffer
-      // issue: Got the closest besides this by using round at fill_sample and adding +0.5 INSIDE curr_u/v assignment
-      fill_sample((int)floor(cur_x), (int)floor(cur_y), temp_color);
+          curr_u = (sample_x - x0) * x_diff;
+          curr_v = (sample_y - y0) * y_diff;
+
+          temp_color = sampler->sample_bilinear(tex, curr_u, curr_v, 0);
+          // temp_color = sampler->sample_nearest(tex, curr_u, curr_v, 0);
+
+          // Once we have the color, write to our supersample frame buffer
+          // issue: Got the closest besides this by using round at fill_sample and adding +0.5 INSIDE curr_u/v assignment
+          fill_sample((int)round(supsamp_x), (int)round(supsamp_y), temp_color);
+        }
+      }
       
     }
   }
