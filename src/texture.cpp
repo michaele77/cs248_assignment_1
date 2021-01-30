@@ -140,6 +140,23 @@ Color Sampler2DImp::sample_bilinear(Texture& tex,
   float pixel_u = mip_width*u - 0.5f;
   float pixel_v = mip_height*v - 0.5f;
 
+  // CLAMPING IMPLEMENTATION:
+  // if any of the bounds are outside of the render square, set them to the bound value\
+  // Technically, these statements are contradictory. Not an issue for textures larger than 1x1...
+  if (pixel_u < 0) {
+    pixel_u = 0;
+  }
+  if (pixel_v < 0) {
+    pixel_v = 0;
+  }
+  if (pixel_u > mip_width - 1) {
+    pixel_u = mip_width - 1;
+  }
+  if (pixel_v > mip_height - 1) {
+    pixel_v = mip_height - 1;
+  }
+
+
 
   // Note: the texels here are stored in the 4 pixels frame buffer structure
 
@@ -148,21 +165,7 @@ Color Sampler2DImp::sample_bilinear(Texture& tex,
   int bounds_v0 = floor(pixel_v);
   int bounds_v1 = bounds_v0 + 1;
 
-  // CLAMPING IMPLEMENTATION:
-  // if any of the bounds are outside of the render square, set them to the bound value
-  if (bounds_u0 < 0) {
-    bounds_u0 = 0;
-  }
-  if (bounds_v0 < 0) {
-    bounds_v0 = 0;
-  }
-  if (bounds_u1 > mip_width) {
-    bounds_u1 = mip_width;
-  }
-  if (bounds_v1 > mip_height) {
-    bounds_v1 = mip_height;
-  }
-
+ 
   // Bilinear takes 3 interpolations:
   // Get colors for first 2 based on outter bounds
 
@@ -215,6 +218,19 @@ Color Sampler2DImp::sample_bilinear(Texture& tex,
   color_to_return.g = lh_comb.g + ( pixel_v-bounds_v0 ) * (uh_comb.g - lh_comb.g);
   color_to_return.b = lh_comb.b + ( pixel_v-bounds_v0 ) * (uh_comb.b - lh_comb.b);
   color_to_return.a = lh_comb.a + ( pixel_v-bounds_v0 ) * (uh_comb.a - lh_comb.a);
+
+
+  // printf("color @ u0,v0: red- %f, green- %f, blue- %f, alpha- %f\n", lh_0.r, lh_0.g, lh_0.b, lh_0.a);
+  // printf("color @ u1,v0: red- %f, green- %f, blue- %f, alpha- %f\n", lh_1.r, lh_1.g, lh_1.b, lh_1.a);
+  // printf("color @ u0,v1: red- %f, green- %f, blue- %f, alpha- %f\n", uh_0.r, uh_0.g, uh_0.b, uh_0.a);
+  // printf("color @ u1,v1: red- %f, green- %f, blue- %f, alpha- %f\n", uh_1.r, uh_1.g, uh_1.b, uh_1.a);
+  // printf("combo (%f, %f): red- %f, green- %f, blue- %f, alpha- %f\n", pixel_u, pixel_v, color_to_return.r, color_to_return.g, color_to_return.b, color_to_return.a);
+
+  // printf("Width, height: %d, %d", mip_width, mip_width);
+  // printf("Input  (u,v) = (%f, %f)", u,v);
+  // printf("Output pixelation (u,v) = (%f, %f)", pixel_u,pixel_v);
+
+  // printf("\n\n");
 
 
   return color_to_return;

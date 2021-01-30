@@ -585,8 +585,8 @@ void SoftwareRendererImp::rasterize_image( float x0, float y0,
   float base_divider = 2*sample_rate; // Divide our numbers by 2*sample_rate
   float base_multiplier = 1/base_divider;
 
-  for (float cur_y = y0; cur_y < y1; cur_y ++) {
-    for (float cur_x = x0; cur_x < x1; cur_x ++) {
+  for (int cur_y = floor(y0); cur_y < ceil(y1); cur_y ++) {
+    for (int cur_x = floor(x0); cur_x < ceil(x1); cur_x ++) {
       for (int suppix_x = 1; suppix_x < base_divider; suppix_x += 2) {
         for (int suppix_y = 1; suppix_y < base_divider; suppix_y += 2) {
           // sample rate = 1 --> 1/2
@@ -600,6 +600,33 @@ void SoftwareRendererImp::rasterize_image( float x0, float y0,
 
           curr_u = (sample_x - x0) * x_diff;
           curr_v = (sample_y - y0) * y_diff;
+
+          if ((cur_x < x0 + 10) && (cur_y < y0 + 10)) {
+            printf("x0 is %f\n", x0);
+            printf("x1 is %f\n", x1);
+            printf("y0 is %f\n", y0);
+            printf("y1 is %f\n", y1);
+            printf("cur_x is %d\n", cur_x);
+            printf("cur_y is %d\n", cur_y);
+
+            printf("sample_x is %f\n", sample_x);
+            printf("sample_y is %f\n", sample_y);
+            printf("supsamp_x is %f\n", supsamp_x);
+            printf("supsamp_y is %f\n", supsamp_y);
+            printf("base_divider is %f\n", base_divider);
+            printf("x_diff is %f\n", x_diff);
+            printf("y_diff is %f\n", x_diff);
+
+            printf("curr_u is %f\n", curr_u);
+            printf("curr_v is %f\n", curr_v);
+
+
+
+            printf("\n\n");
+
+          }
+
+          
 
           temp_color = sampler->sample_bilinear(tex, curr_u, curr_v, 0);
           // temp_color = sampler->sample_nearest(tex, curr_u, curr_v, 0);
