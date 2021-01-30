@@ -19,6 +19,7 @@ std::vector<unsigned char> supersample_render_target;
 size_t supersample_width = 0;
 size_t supersample_height = 0;
 int cntrrr = 0;
+int cnt_debug = 0;
 
 
 
@@ -65,6 +66,19 @@ void SoftwareRendererImp::fill_sample(int sx, int sy, const Color &color) {
 	supersample_render_target[4 * (sx + sy * supersample_width) + 1] = (uint8_t)(pixel_color.g * 255);
 	supersample_render_target[4 * (sx + sy * supersample_width) + 2] = (uint8_t)(pixel_color.b * 255);
 	supersample_render_target[4 * (sx + sy * supersample_width) + 3] = (uint8_t)(pixel_color.a * 255);
+
+  if (cnt_debug < 3) {
+    printf("cnt debug is %d --> %d\n", cnt_debug, supersample_render_target[4 * (sx + sy * supersample_width)]);
+    printf("cnt debug is %d --> %d\n", cnt_debug, supersample_render_target[4 * (sx + sy * supersample_width)+1]);
+    printf("cnt debug is %d --> %d\n", cnt_debug, supersample_render_target[4 * (sx + sy * supersample_width)+2]);
+    printf("cnt debug is %d --> %d\n", cnt_debug, supersample_render_target[4 * (sx + sy * supersample_width)+3]);
+    
+    cnt_debug++;
+  } else if (cnt_debug < 1000000) {
+    cnt_debug ++;
+  } else {
+    cnt_debug = 0;
+  }
 
 
 }
@@ -177,13 +191,17 @@ void SoftwareRendererImp::set_sample_rate( size_t sample_rate ) {
   this->sample_rate = sample_rate;
 
   // CHECK! what are we supposed to modify here? handled in drawsvg
-  supersample_render_target.resize( target_h*target_w*4*sample_rate*sample_rate );
+  
   supersample_width = this->target_w*sample_rate;
   supersample_height = this->target_h*sample_rate;
+  supersample_render_target.resize( supersample_height*supersample_width*4 );
   // issue: fill everything with 255
-  std::fill(supersample_render_target.begin(), supersample_render_target.end(), 255);
+  std::fill(supersample_render_target.begin(), supersample_render_target.end(), 255.f);
 
   printf("Sample rate ois %d\n", (int)sample_rate);
+
+  printf("sample of some indices: %d, %d, %d, %d, %d...\n", supersample_render_target[0], supersample_render_target[1],
+  supersample_render_target[2], supersample_render_target[3], supersample_render_target[4]);
 
 
 }
@@ -200,12 +218,12 @@ void SoftwareRendererImp::set_render_target( unsigned char* render_target,
   // CHECK! what are we supposed to modify here? made the supersample buffer global
   cout << "width is " << width;
   cout << "height is " << height;
-  supersample_render_target.resize(width*height*4);
+  
   cout << "total array length is " << supersample_render_target.size();
 
   supersample_width = width*this->sample_rate;
   supersample_height = height*this->sample_rate;
-
+  supersample_render_target.resize(supersample_width*supersample_height*4);
 
   // // Supersample support...create the supersample_render_target
   // int arrSize = render_target.size();
@@ -765,6 +783,7 @@ void SoftwareRendererImp::resolve( void ) {
   // // CHECK! Come back and change filter and supersample types to be unsigned char to optimize
   std::vector<float> blur_buffer;
   blur_buffer.resize(4*target_h*target_w);
+  std::fill(blur_buffer.begin(), blur_buffer.end(), 0);
   
 
   // // std::fill(filter_mask.begin(), filter_mask.end(), 0);
@@ -809,8 +828,8 @@ void SoftwareRendererImp::resolve( void ) {
   for(int i = 0; i < supersample_height; i++) {
     for(int j = 0; j < supersample_width; j++) {
 
-      targt_i = floor(i/sample_rate);
-      targt_j = floor(j/sample_rate);
+      targt_i = floor(i/(float)sample_rate);
+      targt_j = floor(j/(float)sample_rate);
 
       indx_target = 4*(targt_i*target_w + targt_j);
       indx_supsamp_target = 4*(i*supersample_width + j);
@@ -822,21 +841,33 @@ void SoftwareRendererImp::resolve( void ) {
       // render_target[indx_target+2] += round(supersample_render_target[indx_supsamp_target+2] / sample_rate_sq);
       // render_target[indx_target+3] += round(supersample_render_target[indx_supsamp_target+3] / sample_rate_sq);
 
-      blur_buffer[indx_target] += (float)supersample_render_target[indx_supsamp_target] / sample_rate_sq;
+      if ((i == 0) && (j == 0)) {
+        printf("samplerate: %d, i: %d--> %d\n", sample_rate, i, supersample_render_target[indx_supsamp_target]);
+        printf("samplerate: %d, i: %d--> %d\n", sample_rate, i, supersample_render_target[indx_supsamp_target+1]);
+        printf("samplerate: %d, i: %d--> %d\n", sample_rate, i, supersample_render_target[indx_supsamp_target+2]);
+        printf("samplerate: %d, i: %d--> %d\n", sample_rate, i, supersample_render_target[indx_supsamp_target+3]);
+      }
+
+      blur_buffer[indx_target]   += (float)supersample_render_target[indx_supsamp_target] / sample_rate_sq;
       blur_buffer[indx_target+1] += (float)supersample_render_target[indx_supsamp_target+1] / sample_rate_sq;
       blur_buffer[indx_target+2] += (float)supersample_render_target[indx_supsamp_target+2] / sample_rate_sq;
       blur_buffer[indx_target+3] += (float)supersample_render_target[indx_supsamp_target+3] / sample_rate_sq;
+
+      
 
     }
   }
 
   for (int i = 0; i < render_target_length; i++) {
-    // CHECK!
     // issue: if this is +=, then we get pink colors and a bunch of screwed up stuff! Need to assign/overwrite!
-    render_target[i] = (int)floor(blur_buffer[i]);
+    if (i < 10) {
+      printf("samplerate: %d, i: %d--> %f\n", sample_rate, i, blur_buffer[i]);
+    }
+    render_target[i] = (int)floor(blur_buffer[i] + 0.0001); // add a 0.001 because at 3 we get these weird artifacts like 254.999998....
+    // render_target[i] = (int)round(blur_buffer[i]); // round() creates a +~1000 error for all supersamples!
+
   }
 
-  // CHECK!
   // issue: fill everything with 255
   std::fill(supersample_render_target.begin(), supersample_render_target.end(), 255); // Fill super_render_target with 0s so we can reset it!
 
