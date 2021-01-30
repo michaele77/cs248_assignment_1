@@ -266,7 +266,6 @@ void SoftwareRendererImp::draw_element( SVGElement* element ) {
 		draw_image(static_cast<Image&>(*element));
 		break;
 	case GROUP:
-    printf("We have a group!\n");
 		draw_group(static_cast<Group&>(*element));
 		break;
 	default:
@@ -482,7 +481,7 @@ void SoftwareRendererImp::rasterize_triangle( float x0, float y0,
   // First, set up all of the 'inside line' based dot product equations
   float sample_x, sample_y, supersampled_x, supersampled_y;
   float L_i[3];
-  bool in_triangle;
+  bool in_triangle = false;
 
   float A[3] = {ss_y1 - ss_y0, 
               ss_y2 - ss_y1,
@@ -518,8 +517,8 @@ void SoftwareRendererImp::rasterize_triangle( float x0, float y0,
     for (int count_col = col_iter_Lo_bound; count_col < col_iter_Hi_bound; count_col++) {
 
 
-      for (int suppix_x = 1; suppix_x < base_divider; suppix_x += 2) {
-        for (int suppix_y = 1; suppix_y < base_divider; suppix_y += 2) {
+      for (float suppix_x = 1; suppix_x < base_divider; suppix_x += 2) {
+        for (float suppix_y = 1; suppix_y < base_divider; suppix_y += 2) {
           // sample rate = 1 --> 1/2
           // sample rate = 2 --> 1/4, 3/4
           // sample rate = 3 --> 1/6, 3/6, 5/6
@@ -534,12 +533,41 @@ void SoftwareRendererImp::rasterize_triangle( float x0, float y0,
           }
 
           if (is_CCW_flag) {
-            in_triangle = (L_i[0] < 0) && (L_i[1] < 0) && (L_i[2] < 0);
+            in_triangle = (L_i[0] <= 0) && (L_i[1] <= 0) && (L_i[2] <= 0);
           } else {
-            in_triangle = (L_i[0] > 0) && (L_i[1] > 0) && (L_i[2] > 0);
+            in_triangle = (L_i[0] >= 0) && (L_i[1] >= 0) && (L_i[2] >= 0);
           }
           // in_triangle = (L_i[0] > 0) && (L_i[1] > 0) && (L_i[2] > 0);
           // in_triangle = (L_i[0] <= 0) && (L_i[1] <= 0) && (L_i[2] <= 0);
+
+          // // Printing the bottom "chin" error of the cat
+          // if ((count_col < col_iter_Lo_bound + 5) && (count_row < row_iter_Lo_bound + 5)) {
+
+          //   printf("x0, y0 is (%f, %f)\n", ss_x0, ss_y0);
+          //   printf("x1, y1 is (%f, %f)\n", ss_x1, ss_y1);
+          //   printf("x2, y2 is (%f, %f)\n", ss_x2, ss_y2);
+
+
+          //   printf("x is %d\n", count_col);
+          //   printf("y is %d\n", count_row);
+
+          //   printf("sample_x is %f\n", sample_x);
+          //   printf("sample_y is %f\n", sample_y);
+          //   printf("supsamp_x is %f\n", supersampled_x);
+          //   printf("supsamp_y is %f\n", supersampled_y);
+
+          //   printf("base_divider is %f\n", base_divider);
+
+          //   printf("L[0] is %f\n", L_i[0]);
+          //   printf("L[1] is %f\n", L_i[1]);
+          //   printf("L[2] is %f\n", L_i[2]);
+
+          //   printf("is it inside %d\n", in_triangle);
+
+
+          //   printf("\n\n");
+
+          // }
 
           if ( in_triangle ) {
             fill_sample((int)round(supersampled_x), (int)round(supersampled_y), color); // If we made it here, we're in the triangle, so Color it!
@@ -601,30 +629,30 @@ void SoftwareRendererImp::rasterize_image( float x0, float y0,
           curr_u = (sample_x - x0) * x_diff;
           curr_v = (sample_y - y0) * y_diff;
 
-          if ((cur_x < x0 + 10) && (cur_y < y0 + 10)) {
-            printf("x0 is %f\n", x0);
-            printf("x1 is %f\n", x1);
-            printf("y0 is %f\n", y0);
-            printf("y1 is %f\n", y1);
-            printf("cur_x is %d\n", cur_x);
-            printf("cur_y is %d\n", cur_y);
+          // if ((cur_x < x0 + 10) && (cur_y < y0 + 10)) {
+          //   printf("x0 is %f\n", x0);
+          //   printf("x1 is %f\n", x1);
+          //   printf("y0 is %f\n", y0);
+          //   printf("y1 is %f\n", y1);
+          //   printf("cur_x is %d\n", cur_x);
+          //   printf("cur_y is %d\n", cur_y);
 
-            printf("sample_x is %f\n", sample_x);
-            printf("sample_y is %f\n", sample_y);
-            printf("supsamp_x is %f\n", supsamp_x);
-            printf("supsamp_y is %f\n", supsamp_y);
-            printf("base_divider is %f\n", base_divider);
-            printf("x_diff is %f\n", x_diff);
-            printf("y_diff is %f\n", x_diff);
+          //   printf("sample_x is %f\n", sample_x);
+          //   printf("sample_y is %f\n", sample_y);
+          //   printf("supsamp_x is %f\n", supsamp_x);
+          //   printf("supsamp_y is %f\n", supsamp_y);
+          //   printf("base_divider is %f\n", base_divider);
+          //   printf("x_diff is %f\n", x_diff);
+          //   printf("y_diff is %f\n", x_diff);
 
-            printf("curr_u is %f\n", curr_u);
-            printf("curr_v is %f\n", curr_v);
+          //   printf("curr_u is %f\n", curr_u);
+          //   printf("curr_v is %f\n", curr_v);
 
 
 
-            printf("\n\n");
+          //   printf("\n\n");
 
-          }
+          // }
 
           
 
@@ -805,7 +833,7 @@ void SoftwareRendererImp::resolve( void ) {
   for (int i = 0; i < render_target_length; i++) {
     // CHECK!
     // issue: if this is +=, then we get pink colors and a bunch of screwed up stuff! Need to assign/overwrite!
-    render_target[i] = round(blur_buffer[i]);
+    render_target[i] = (int)floor(blur_buffer[i]);
   }
 
   // CHECK!
